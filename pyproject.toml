@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gpureg"
+version = "0.1.0"
+description = "Batched GPU fitting of GLM, Cox and lasso models with PyTorch"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Álvaro Araya Marín" }]
+dependencies = ["torch>=2.0", "numpy", "pandas"]
+
+[project.optional-dependencies]
+test = ["pytest", "statsmodels", "scikit-learn"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
