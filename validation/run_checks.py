@@ -12,12 +12,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
+import sklearn
 import statsmodels.api as sm
 import torch
 from sklearn.linear_model import Lasso, LogisticRegression
 
 from gpureg import cox_screen, glm_screen, lasso_cv
 
+# scikit-learn >= 1.8 deprecates `penalty` (removed in 1.10); l1_ratio=1 selects pure L1.
+_SK_L1 = ({"l1_ratio": 1.0} if tuple(int(v) for v in sklearn.__version__.split(".")[:2]) >= (1, 8)
+          else {"penalty": "l1"})
 TOL = {"beta_abs": 1e-5, "se_rel": 1e-4, "log10p_abs": 1e-3, "lasso_gauss_abs": 1e-5,
        "lasso_binom_abs": 1e-3}
 SM_FAMILIES = {"gaussian": sm.families.Gaussian(), "binomial": sm.families.Binomial(),
@@ -114,7 +118,7 @@ def check_lasso_binomial(device, n=1000, p=20):
                    tol=1e-10, max_iter=50000)
     err = 0.0
     for i in (3, 9):
-        ref = LogisticRegression(penalty="l1", C=1 / (n * res.lambdas[i]), solver="saga",
+        ref = LogisticRegression(**_SK_L1, C=1 / (n * res.lambdas[i]), solver="saga",
                                  tol=1e-10, max_iter=200000).fit(X, y)
         err = max(err, float(np.abs(res.coef[i] - ref.coef_[0]).max()))
     return {"check": "lasso_binomial_vs_sklearn", "n": n, "m": p, "coef_max_abs_err": err,

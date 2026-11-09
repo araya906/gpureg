@@ -1,0 +1,150 @@
+{
+  "timestamp": "2026-11-09T16:08:14+00:00",
+  "device": "cpu",
+  "torch": "2.15.0+cu132",
+  "python": "3.13.18",
+  "all_pass": true,
+  "checks": [
+    {
+      "check": "screen_gaussian",
+      "n": 500,
+      "m": 10,
+      "beta_max_abs_err": 3.3306690738754696e-16,
+      "se_max_rel_err": 7.914503659077357e-16,
+      "log10p_max_abs_err": 2.1316282072803006e-14,
+      "all_converged": true,
+      "pass": true,
+      "time_gpureg_s": 0.005475426000003836,
+      "time_reference_s": 0.01119826199999352
+    },
+    {
+      "check": "screen_binomial",
+      "n": 500,
+      "m": 10,
+      "beta_max_abs_err": 2.71282996067157e-13,
+      "se_max_rel_err": 2.4032959723197665e-07,
+      "log10p_max_abs_err": 9.367675941618359e-07,
+      "all_converged": true,
+      "pass": true,
+      "time_gpureg_s": 0.0035237539999855017,
+      "time_reference_s": 0.013646585999993022
+    },
+    {
+      "check": "screen_poisson",
+      "n": 500,
+      "m": 10,
+      "beta_max_abs_err": 1.577370248306842e-10,
+      "se_max_rel_err": 1.4901023838565324e-10,
+      "log10p_max_abs_err": 2.724529712949675e-09,
+      "all_converged": true,
+      "pass": true,
+      "time_gpureg_s": 0.0031980199999850356,
+      "time_reference_s": 0.017877787999992734
+    },
+    {
+      "check": "screen_cox_efron",
+      "n": 500,
+      "m": 10,
+      "beta_max_abs_err": 4.117054197561032e-10,
+      "se_max_rel_err": 2.663630674146391e-11,
+      "log10p_max_abs_err": 1.2124025339232958e-08,
+      "all_converged": true,
+      "pass": true,
+      "time_gpureg_s": 0.007260880999979236,
+      "time_reference_s": 0.1882643749999886
+    },
+    {
+      "check": "screen_cox_breslow",
+      "n": 500,
+      "m": 10,
+      "beta_max_abs_err": 3.472929444026107e-10,
+      "se_max_rel_err": 2.2935746304644688e-11,
+      "log10p_max_abs_err": 1.0070416944785165e-08,
+      "all_converged": true,
+      "pass": true,
+      "time_gpureg_s": 0.007389917000011792,
+      "time_reference_s": 0.09877018800000315
+    },
+    {
+      "check": "screen_gaussian",
+      "n": 5000,
+      "m": 100,
+      "beta_max_abs_err": 1.2141980129665164e-15,
+      "se_max_rel_err": 2.695784372441863e-15,
+      "log10p_max_abs_err": 8.526512829121202e-14,
+      "all_converged": true,
+      "pass": true,
+      "time_gpureg_s": 0.04104850299998475,
+      "time_reference_s": 0.37115567899999746
+    },
+    {
+      "check": "screen_binomial",
+      "n": 5000,
+      "m": 100,
+      "beta_max_abs_err": 3.3389957465601583e-12,
+      "se_max_rel_err": 2.7287933003759063e-07,
+      "log10p_max_abs_err": 2.1016972183929283e-05,
+      "all_converged": true,
+      "pass": true,
+      "time_gpureg_s": 0.06413187999999082,
+      "time_reference_s": 0.48726750099999094
+    },
+    {
+      "check": "screen_poisson",
+      "n": 5000,
+      "m": 100,
+      "beta_max_abs_err": 1.2693202044999907e-10,
+      "se_max_rel_err": 8.982376182773714e-11,
+      "log10p_max_abs_err": 4.666993191904112e-08,
+      "all_converged": true,
+      "pass": true,
+      "time_gpureg_s": 0.05632633299998702,
+      "time_reference_s": 0.4889118400000143
+    },
+    {
+      "check": "screen_cox_efron",
+      "n": 5000,
+      "m": 100,
+      "beta_max_abs_err": 5.169198402654729e-11,
+      "se_max_rel_err": 3.803162595523164e-12,
+      "log10p_max_abs_err": 2.6997582835974754e-08,
+      "all_converged": true,
+      "pass": true,
+      "time_gpureg_s": 0.3163097300000004,
+      "time_reference_s": 6.623860941999993
+    },
+    {
+      "check": "screen_cox_breslow",
+      "n": 5000,
+      "m": 100,
+      "beta_max_abs_err": 4.1118303206744145e-11,
+      "se_max_rel_err": 2.8234029975448185e-12,
+      "log10p_max_abs_err": 2.0119529153816984e-08,
+      "all_converged": true,
+      "pass": true,
+      "time_gpureg_s": 0.4092507640000065,
+      "time_reference_s": 3.8593506210000044
+    },
+    {
+      "check": "lasso_gaussian_vs_sklearn",
+      "n": 1000,
+      "m": 50,
+      "coef_max_abs_err": 4.32116703530383e-11,
+      "pass": true
+    },
+    {
+      "check": "lasso_binomial_vs_sklearn",
+      "n": 1000,
+      "m": 20,
+      "coef_max_abs_err": 3.26254578908447e-10,
+      "pass": true
+    },
+    {
+      "check": "lasso_cox_signal_recovery",
+      "n": 2000,
+      "m": 50,
+      "n_selected": 13,
+      "pass": true
+    }
+  ]
+}
