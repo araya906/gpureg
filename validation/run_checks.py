@@ -2,12 +2,14 @@
 
 Usage:  python validation/run_checks.py [--quick] [--out validation/results]
 Writes latest.json / latest.md and appends to history.jsonl. Exit code 0 only if every check passes.
+The float32-vs-float64 accuracy report is informational and never affects the exit code.
 """
 import argparse
 import json
 import platform
 import sys
 import time
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -75,19 +77,25 @@ def compare_screen(res, ref):
             "log10p_max_abs_err": p_err, "all_converged": bool(res["converged"].all()), "pass": ok}
 
 
+def _fit_screen(kind, C, F, out, ties, device, dtype=torch.float64):
+    if kind == "cox":
+        return cox_screen(F, out[0], out[1], C, ties=ties, device=device, dtype=dtype)
+    return glm_screen(F, out, C, family=kind, device=device, dtype=dtype)
+
+
+def _screen_name(kind, ties):
+    return f"screen_{kind}" + (f"_{ties}" if kind == "cox" else "")
+
+
 def check_screen(kind, n, m, seed, device, ties="efron"):
     C, F, out = simulate_screen(kind, n, m, seed)
     start = time.perf_counter()
-    if kind == "cox":
-        res = cox_screen(F, out[0], out[1], C, ties=ties, device=device)
-    else:
-        res = glm_screen(F, out, C, family=kind, device=device)
+    res = _fit_screen(kind, C, F, out, ties, device)
     t_ours = time.perf_counter() - start
     start = time.perf_counter()
     ref = reference_screen(kind, C, F, out, ties)
     t_ref = time.perf_counter() - start
-    name = f"screen_{kind}" + (f"_{ties}" if kind == "cox" else "")
-    return {"check": name, "n": n, "m": m, **compare_screen(res, ref),
+    return {"check": _screen_name(kind, ties), "n": n, "m": m, **compare_screen(res, ref),
             "time_gpureg_s": t_ours, "time_reference_s": t_ref}
 
 
@@ -96,11 +104,16 @@ def _standardized(n, p, seed):
     return (X - X.mean(0)) / X.std(0)
 
 
-def check_lasso_gaussian(device, n=1000, p=50):
+def _lasso_gaussian_path(device, n, p, dtype=torch.float64):
     X = _standardized(n, p, 10)
     y = X[:, :4] @ np.array([1.0, -0.8, 0.5, 0.3]) + np.random.default_rng(11).normal(size=n)
     res = lasso_cv(X, y, family="gaussian", n_folds=0, n_lambda=20, device=device,
-                   tol=1e-10, max_iter=20000)
+                   dtype=dtype, tol=1e-10, max_iter=20000)
+    return X, y, res
+
+
+def check_lasso_gaussian(device, n=1000, p=50):
+    X, y, res = _lasso_gaussian_path(device, n, p)
     err = 0.0
     for i in (2, 10, 19):
         ref = Lasso(alpha=res.lambdas[i], tol=1e-12, max_iter=200000).fit(X, y)
@@ -138,6 +151,38 @@ def check_lasso_cox_recovery(device, n=2000, p=50):
             "pass": {"x0", "x1", "x2"} <= chosen}
 
 
+def float32_screen(kind, n, m, seed, device, ties="efron"):
+    """Same data fitted in float32 and float64: max discrepancies, no pass/fail."""
+    C, F, out = simulate_screen(kind, n, m, seed)
+    lo = _fit_screen(kind, C, F, out, ties, device, torch.float32)
+    hi = _fit_screen(kind, C, F, out, ties, device, torch.float64)
+    beta, se = lo["beta"].to_numpy(np.float64), lo["se"].to_numpy(np.float64)
+    p_lo, p_hi = lo["p"].to_numpy(np.float64), hi["p"].to_numpy()
+    shown = p_hi >= np.finfo(np.float32).tiny  # smaller p underflow in float32 output
+    p_err = np.abs(_neg_log10(p_lo[shown]) - _neg_log10(p_hi[shown]))
+    return {"check": _screen_name(kind, ties), "n": n, "m": m,
+            "beta_max_abs_err": float(np.abs(beta - hi["beta"].to_numpy()).max()),
+            "se_max_rel_err": float((np.abs(se - hi["se"].to_numpy()) / hi["se"].to_numpy()).max()),
+            "log10p_max_abs_err": float(p_err.max()) if p_err.size else 0.0,
+            "p_underflow": int((~shown).sum()), "converged_frac": float(lo["converged"].mean())}
+
+
+def float32_lasso_gaussian(device, n=1000, p=50):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        lo = _lasso_gaussian_path(device, n, p, torch.float32)[2]
+    hi = _lasso_gaussian_path(device, n, p)[2]
+    err = float(np.abs(lo.coef.astype(np.float64) - hi.coef).max())
+    return {"check": "lasso_gaussian_path", "n": n, "m": p, "beta_max_abs_err": err}
+
+
+def run_float32(quick, device):
+    n, m = (500, 10) if quick else (5000, 100)
+    rows = [float32_screen(kind, n, m, 1, device) for kind in ("gaussian", "binomial", "poisson")]
+    rows += [float32_screen("cox", n, m, 2, device, ties) for ties in ("efron", "breslow")]
+    return rows + [float32_lasso_gaussian(device)]
+
+
 def run_all(quick, device):
     sizes = [(500, 10)] if quick else [(500, 10), (5000, 100)]
     checks = []
@@ -151,17 +196,34 @@ def run_all(quick, device):
     return checks
 
 
-def write_report(checks, out_dir, device):
+def _float32_lines(rows):
+    keys = ("beta_max_abs_err", "se_max_rel_err", "log10p_max_abs_err", "p_underflow",
+            "converged_frac")
+    lines = ["", "## float32 vs float64 (informational, not gated)", "",
+             "-log10 p compared where p >= float32 tiny; smaller p counted as underflow.", "",
+             "| fit | n | m | beta max abs | se max rel | -log10 p max abs | p underflow "
+             "| converged |",
+             "|---|---|---|---|---|---|---|---|"]
+    for r in rows:
+        cells = [f"{r[k]:.2g}" if k in r else "-" for k in keys]
+        lines.append(f"| {r['check']} | {r['n']} | {r['m']} | " + " | ".join(cells) + " |")
+    return lines
+
+
+def write_report(checks, out_dir, device, float32=()):
     out_dir.mkdir(parents=True, exist_ok=True)
     report = {"timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
               "device": device, "torch": torch.__version__, "python": platform.python_version(),
-              "all_pass": all(c["pass"] for c in checks), "checks": checks}
+              "all_pass": all(c["pass"] for c in checks), "checks": checks,
+              "float32_accuracy": list(float32)}
     (out_dir / "latest.json").write_text(json.dumps(report, indent=2))
     with open(out_dir / "history.jsonl", "a") as fh:
         fh.write(json.dumps({k: report[k] for k in ("timestamp", "device", "all_pass")}) + "\n")
     lines = [f"# Validation {report['timestamp']} ({device})", "", "| check | n | m | pass |",
              "|---|---|---|---|"]
     lines += [f"| {c['check']} | {c['n']} | {c['m']} | {'yes' if c['pass'] else 'NO'} |" for c in checks]
+    if float32:
+        lines += _float32_lines(float32)
     (out_dir / "latest.md").write_text("\n".join(lines) + "\n")
     return report["all_pass"]
 
@@ -172,7 +234,8 @@ def main():
     parser.add_argument("--out", default="validation/results")
     args = parser.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    ok = write_report(run_all(args.quick, device), Path(args.out), device)
+    ok = write_report(run_all(args.quick, device), Path(args.out), device,
+                      run_float32(args.quick, device))
     print("ALL CHECKS PASSED" if ok else "SOME CHECKS FAILED: see latest.md")
     return 0 if ok else 1
 
