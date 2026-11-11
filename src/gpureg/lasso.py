@@ -181,14 +181,19 @@ def _soft_prox(u, step, lam, pf, alpha):
 
 
 def _backtrack(obj, z, fz, gz, L, lam, pf, alpha, max_doublings=50):
-    """Proximal step with per-model backtracking on the Lipschitz estimate L."""
+    """Proximal step with per-model backtracking on the Lipschitz estimate L.
+
+    The acceptance slack is relative to |f| and scaled to the dtype's rounding error,
+    so float32 objectives do not keep doubling L on rounding noise.
+    """
+    slack = 10 * torch.finfo(fz.dtype).eps
     for _ in range(max_doublings):
         step = 1.0 / L
         cand = _soft_prox(z - step[:, None] * gz, step, lam, pf, alpha)
         diff = cand - z
         fc, _ = obj(cand, grad=False)
         bound = fz + (gz * diff).sum(1) + 0.5 * L * (diff * diff).sum(1)
-        ok = fc <= bound + 1e-12 * fz.abs()
+        ok = fc <= bound + slack * fz.abs()
         if bool(ok.all()):
             break
         L = torch.where(ok, L, 2 * L)

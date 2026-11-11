@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import torch
 from sklearn.linear_model import Lasso
 
 from gpureg import lasso_cv
@@ -40,3 +41,11 @@ def test_cox_cv_selects_signals_and_keeps_unpenalized():
     assert {"x0", "x1", "x2"} <= set(res.selected("min"))
     assert "x29" not in res.selected("min")
     assert np.all(res.coef[:, 29] != 0)
+
+
+def test_float32_path_matches_float64():
+    X = _standardized(300, 20, 6)
+    y = X[:, :3] @ np.array([1.0, -0.8, 0.5]) + np.random.default_rng(7).normal(size=300)
+    fits = [lasso_cv(X, y, family="gaussian", n_folds=0, n_lambda=10, device="cpu", dtype=dt,
+                     tol=1e-10, max_iter=20000) for dt in (torch.float32, torch.float64)]
+    np.testing.assert_allclose(fits[0].coef.astype(np.float64), fits[1].coef, atol=1e-4)

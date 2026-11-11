@@ -9,7 +9,6 @@ import json
 import platform
 import sys
 import time
-import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -25,7 +24,7 @@ from gpureg import cox_screen, glm_screen, lasso_cv
 _SK_L1 = ({"l1_ratio": 1.0} if tuple(int(v) for v in sklearn.__version__.split(".")[:2]) >= (1, 8)
           else {"penalty": "l1"})
 TOL = {"beta_abs": 1e-5, "se_rel": 1e-4, "log10p_abs": 1e-3, "lasso_gauss_abs": 1e-5,
-       "lasso_binom_abs": 1e-3}
+       "lasso_binom_abs": 1e-3, "lasso_f32_abs": 1e-4}
 SM_FAMILIES = {"gaussian": sm.families.Gaussian(), "binomial": sm.families.Binomial(),
                "poisson": sm.families.Poisson()}
 
@@ -167,20 +166,19 @@ def float32_screen(kind, n, m, seed, device, ties="efron"):
             "p_underflow": int((~shown).sum()), "converged_frac": float(lo["converged"].mean())}
 
 
-def float32_lasso_gaussian(device, n=1000, p=50):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        lo = _lasso_gaussian_path(device, n, p, torch.float32)[2]
+def check_lasso_gaussian_float32(device, n=1000, p=50):
+    """float32 lasso path against float64 (gated: the backtracking slack is dtype-aware)."""
+    lo = _lasso_gaussian_path(device, n, p, torch.float32)[2]
     hi = _lasso_gaussian_path(device, n, p)[2]
     err = float(np.abs(lo.coef.astype(np.float64) - hi.coef).max())
-    return {"check": "lasso_gaussian_path", "n": n, "m": p, "beta_max_abs_err": err}
+    return {"check": "lasso_gaussian_float32_vs_float64", "n": n, "m": p,
+            "coef_max_abs_err": err, "pass": err <= TOL["lasso_f32_abs"]}
 
 
 def run_float32(quick, device):
     n, m = (500, 10) if quick else (5000, 100)
     rows = [float32_screen(kind, n, m, 1, device) for kind in ("gaussian", "binomial", "poisson")]
-    rows += [float32_screen("cox", n, m, 2, device, ties) for ties in ("efron", "breslow")]
-    return rows + [float32_lasso_gaussian(device)]
+    return rows + [float32_screen("cox", n, m, 2, device, ties) for ties in ("efron", "breslow")]
 
 
 def run_all(quick, device):
@@ -191,7 +189,8 @@ def run_all(quick, device):
             checks.append(check_screen(kind, n, m, 1, device))
         for ties in ("efron", "breslow"):
             checks.append(check_screen("cox", n, m, 2, device, ties))
-    for fn in (check_lasso_gaussian, check_lasso_binomial, check_lasso_cox_recovery):
+    for fn in (check_lasso_gaussian, check_lasso_gaussian_float32, check_lasso_binomial,
+               check_lasso_cox_recovery):
         checks.append(fn(device))
     return checks
 

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-10T01:48:07+00:00",
+  "timestamp": "2026-11-11T01:56:34+00:00",
   "device": "cpu",
   "torch": "2.15.0+cu132",
   "python": "3.13.18",
@@ -14,8 +14,8 @@
       "log10p_max_abs_err": 2.1316282072803006e-14,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.10042451300000721,
-      "time_reference_s": 0.014472719999957917
+      "time_gpureg_s": 0.0761786520000669,
+      "time_reference_s": 0.01308980999999676
     },
     {
       "check": "screen_binomial",
@@ -26,8 +26,8 @@
       "log10p_max_abs_err": 9.367675941618359e-07,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.007839504999992641,
-      "time_reference_s": 0.011975441999993564
+      "time_gpureg_s": 0.008137480000073083,
+      "time_reference_s": 0.016796204000002035
     },
     {
       "check": "screen_poisson",
@@ -38,8 +38,8 @@
       "log10p_max_abs_err": 2.724529712949675e-09,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.003099184999996396,
-      "time_reference_s": 0.016798225000002276
+      "time_gpureg_s": 0.002908843000000161,
+      "time_reference_s": 0.018921476999935294
     },
     {
       "check": "screen_cox_efron",
@@ -50,8 +50,8 @@
       "log10p_max_abs_err": 1.2124025339232958e-08,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.016441747000044415,
-      "time_reference_s": 0.22754702199995336
+      "time_gpureg_s": 0.011663553999937903,
+      "time_reference_s": 0.21219087299994044
     },
     {
       "check": "screen_cox_breslow",
@@ -62,8 +62,8 @@
       "log10p_max_abs_err": 1.0070416944785165e-08,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.20217192500001602,
-      "time_reference_s": 0.10717409099993347
+      "time_gpureg_s": 0.01444785800003956,
+      "time_reference_s": 0.11006203699992056
     },
     {
       "check": "screen_gaussian",
@@ -74,8 +74,8 @@
       "log10p_max_abs_err": 8.526512829121202e-14,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.4997361499999897,
-      "time_reference_s": 0.47867268799996054
+      "time_gpureg_s": 0.10753789599993979,
+      "time_reference_s": 0.39291304899995794
     },
     {
       "check": "screen_binomial",
@@ -86,8 +86,8 @@
       "log10p_max_abs_err": 2.1016972183929283e-05,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.7615094669999962,
-      "time_reference_s": 0.7194264400000066
+      "time_gpureg_s": 0.20302364899998793,
+      "time_reference_s": 0.5095722460000616
     },
     {
       "check": "screen_poisson",
@@ -98,8 +98,8 @@
       "log10p_max_abs_err": 4.666993191904112e-08,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.7057379339998988,
-      "time_reference_s": 0.5780347310000025
+      "time_gpureg_s": 0.15061953500003256,
+      "time_reference_s": 0.5085300370001278
     },
     {
       "check": "screen_cox_efron",
@@ -110,8 +110,8 @@
       "log10p_max_abs_err": 2.6997582835974754e-08,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 7.422679721000009,
-      "time_reference_s": 5.784437335999996
+      "time_gpureg_s": 6.6879808969999885,
+      "time_reference_s": 7.441561598999897
     },
     {
       "check": "screen_cox_breslow",
@@ -122,8 +122,8 @@
       "log10p_max_abs_err": 2.0119529153816984e-08,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.34367086999998264,
-      "time_reference_s": 3.401502648000019
+      "time_gpureg_s": 1.950751567999987,
+      "time_reference_s": 5.027071951999915
     },
     {
       "check": "lasso_gaussian_vs_sklearn",
@@ -133,10 +133,17 @@
       "pass": true
     },
     {
+      "check": "lasso_gaussian_float32_vs_float64",
+      "n": 1000,
+      "m": 50,
+      "coef_max_abs_err": 2.9760022685065834e-07,
+      "pass": true
+    },
+    {
       "check": "lasso_binomial_vs_sklearn",
       "n": 1000,
       "m": 20,
-      "coef_max_abs_err": 2.9336533202695136e-10,
+      "coef_max_abs_err": 3.159568162658388e-10,
       "pass": true
     },
     {
@@ -197,12 +204,6 @@
       "log10p_max_abs_err": 0.00012169776504578067,
       "p_underflow": 2,
       "converged_frac": 1.0
-    },
-    {
-      "check": "lasso_gaussian_path",
-      "n": 1000,
-      "m": 50,
-      "beta_max_abs_err": 0.5979479415165626
     }
   ]
 }
