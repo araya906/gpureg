@@ -24,7 +24,7 @@ from gpureg import cox_screen, glm_screen, lasso_cv
 _SK_L1 = ({"l1_ratio": 1.0} if tuple(int(v) for v in sklearn.__version__.split(".")[:2]) >= (1, 8)
           else {"penalty": "l1"})
 TOL = {"beta_abs": 1e-5, "se_rel": 1e-4, "log10p_abs": 1e-3, "lasso_gauss_abs": 1e-5,
-       "lasso_binom_abs": 1e-3, "lasso_f32_abs": 1e-4}
+       "lasso_binom_abs": 1e-3, "lasso_f32_abs": 1e-4, "screen_f32_beta_abs": 1e-4}
 SM_FAMILIES = {"gaussian": sm.families.Gaussian(), "binomial": sm.families.Binomial(),
                "poisson": sm.families.Poisson()}
 
@@ -175,6 +175,15 @@ def check_lasso_gaussian_float32(device, n=1000, p=50):
             "coef_max_abs_err": err, "pass": err <= TOL["lasso_f32_abs"]}
 
 
+def check_screen_binomial_float32(device, n, m):
+    """float32 binomial screen: every model converged and beta close to float64 (gated)."""
+    row = float32_screen("binomial", n, m, 1, device)
+    ok = row["converged_frac"] == 1.0 and row["beta_max_abs_err"] <= TOL["screen_f32_beta_abs"]
+    return {"check": "screen_binomial_float32_vs_float64", "n": n, "m": m,
+            "beta_max_abs_err": row["beta_max_abs_err"], "converged_frac": row["converged_frac"],
+            "pass": ok}
+
+
 def run_float32(quick, device):
     n, m = (500, 10) if quick else (5000, 100)
     rows = [float32_screen(kind, n, m, 1, device) for kind in ("gaussian", "binomial", "poisson")]
@@ -189,6 +198,7 @@ def run_all(quick, device):
             checks.append(check_screen(kind, n, m, 1, device))
         for ties in ("efron", "breslow"):
             checks.append(check_screen("cox", n, m, 2, device, ties))
+    checks.append(check_screen_binomial_float32(device, *sizes[-1]))
     for fn in (check_lasso_gaussian, check_lasso_gaussian_float32, check_lasso_binomial,
                check_lasso_cox_recovery):
         checks.append(fn(device))

@@ -88,7 +88,7 @@ def _fit_cox_batch(X, event, w, rs, efron, max_iter, tol):
 
 
 def cox_screen(features, time, event, covariates=None, ties="efron", device=None,
-               dtype=torch.float64, chunk_size=None, max_iter=30, tol=1e-9):
+               dtype=torch.float64, chunk_size=None, max_iter=30, tol=None):
     """Fit Surv(time, event) ~ covariates + feature_j for every feature column j.
 
     Rows where feature j is missing (NaN) are dropped for that model only.
@@ -110,7 +110,7 @@ def cox_screen(features, time, event, covariates=None, ties="efron", device=None
 
 
 def cox_fit(X, time, event, ties="efron", device=None, dtype=torch.float64,
-            max_iter=30, tol=1e-9):
+            max_iter=30, tol=None):
     """Fit a single Cox model and return its coefficient table (diagnostics in .attrs)."""
     _check_ties(ties)
     dev = resolve_device(device)

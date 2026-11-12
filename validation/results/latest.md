@@ -1,4 +1,4 @@
-# Validation 2026-11-11T01:56:34+00:00 (cpu)
+# Validation 2026-11-12T01:45:23+00:00 (cpu)
 
 | check | n | m | pass |
 |---|---|---|---|
@@ -12,6 +12,7 @@
 | screen_poisson | 5000 | 100 | yes |
 | screen_cox_efron | 5000 | 100 | yes |
 | screen_cox_breslow | 5000 | 100 | yes |
+| screen_binomial_float32_vs_float64 | 5000 | 100 | yes |
 | lasso_gaussian_vs_sklearn | 1000 | 50 | yes |
 | lasso_gaussian_float32_vs_float64 | 1000 | 50 | yes |
 | lasso_binomial_vs_sklearn | 1000 | 20 | yes |
@@ -23,8 +24,8 @@
 
 | fit | n | m | beta max abs | se max rel | -log10 p max abs | p underflow | converged |
 |---|---|---|---|---|---|---|---|
-| screen_gaussian | 5000 | 100 | 1.7e-08 | 2.2e-07 | 5e-07 | 2 | 1 |
-| screen_binomial | 5000 | 100 | 2.9e-05 | 4.2e-05 | 0.00074 | 1 | 0.98 |
-| screen_poisson | 5000 | 100 | 4.1e-06 | 5.3e-06 | 0.0017 | 1 | 1 |
-| screen_cox_efron | 5000 | 100 | 1.6e-06 | 2.2e-07 | 0.0001 | 2 | 1 |
-| screen_cox_breslow | 5000 | 100 | 1.2e-05 | 7.3e-07 | 0.00012 | 2 | 1 |
+| screen_gaussian | 5000 | 100 | 1.7e-08 | 2.2e-07 | 5.7e-07 | 2 | 1 |
+| screen_binomial | 5000 | 100 | 1.1e-07 | 1.6e-07 | 1.1e-05 | 1 | 1 |
+| screen_poisson | 5000 | 100 | 1.3e-08 | 1.4e-07 | 3.2e-06 | 1 | 1 |
+| screen_cox_efron | 5000 | 100 | 1.5e-07 | 2e-07 | 1.9e-06 | 2 | 1 |
+| screen_cox_breslow | 5000 | 100 | 1.7e-07 | 1.8e-07 | 2.1e-06 | 2 | 1 |

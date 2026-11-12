@@ -11,10 +11,16 @@ import run_checks  # noqa: E402
 @pytest.mark.parametrize("kind", ["gaussian", "cox"])
 def test_float32_screen_reports_small_errors(kind):
     row = run_checks.float32_screen(kind, 300, 4, 0, "cpu")
-    assert 0.0 <= row["converged_frac"] <= 1.0  # default tol=1e-9 is below float32 resolution
+    assert row["converged_frac"] == 1.0  # default tol is raised to the float32 rounding floor
     assert row["beta_max_abs_err"] < 1e-3
     assert row["se_max_rel_err"] < 1e-3
     assert row["log10p_max_abs_err"] < 1e-2
+
+
+def test_float32_binomial_screen_converges():
+    # Before the dtype-aware tol/halving slack, 2 of these 100 float32 fits stalled at iteration 3.
+    row = run_checks.check_screen_binomial_float32("cpu", 5000, 100)
+    assert row["converged_frac"] == 1.0 and row["pass"]
 
 
 def test_float32_report_does_not_gate(tmp_path):

@@ -65,7 +65,7 @@ def _fit_glm_batch(X, y, w, family, max_iter, tol):
 
 
 def glm_screen(features, y, covariates=None, family="binomial", device=None,
-               dtype=torch.float64, chunk_size=None, max_iter=25, tol=1e-9):
+               dtype=torch.float64, chunk_size=None, max_iter=25, tol=None):
     """Fit y ~ 1 + covariates + feature_j for every feature column j.
 
     Rows where feature j is missing (NaN) are dropped for that model only.
@@ -88,7 +88,7 @@ def glm_screen(features, y, covariates=None, family="binomial", device=None,
 
 
 def glm_fit(X, y, family="gaussian", intercept=True, device=None, dtype=torch.float64,
-            max_iter=25, tol=1e-9):
+            max_iter=25, tol=None):
     """Fit a single GLM and return its coefficient table (diagnostics in .attrs)."""
     Xa, names = as_matrix(X, "x")
     yv = as_vector(y, "y")
