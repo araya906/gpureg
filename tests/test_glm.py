@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import statsmodels.api as sm
+import torch
 
 from gpureg import glm_fit, glm_screen
 
@@ -53,3 +54,12 @@ def test_single_fit_matches_statsmodels():
     ref = sm.GLM(y, sm.add_constant(X), family=SM_FAMILIES["binomial"]).fit()
     np.testing.assert_allclose(res["beta"], ref.params, atol=1e-6)
     np.testing.assert_allclose(res["se"], ref.bse, rtol=1e-5)
+
+
+def test_float32_fit_returns_float64_pvalues():
+    rng = np.random.default_rng(3)
+    x = rng.normal(size=5000)
+    y = 0.5 * x + rng.normal(size=5000)  # z ~ 35, p ~ 1e-270: below float32 tiny
+    res = glm_fit(x, y, device="cpu", dtype=torch.float32)
+    assert res["p"].dtype == np.float64 and res["beta"].dtype == np.float32
+    assert 0 < res["p"].iloc[1] < np.finfo(np.float32).tiny

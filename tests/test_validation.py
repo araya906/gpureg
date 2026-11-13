@@ -23,11 +23,17 @@ def test_float32_binomial_screen_converges():
     assert row["converged_frac"] == 1.0 and row["pass"]
 
 
+def test_float32_pvalues_do_not_underflow():
+    # Gaussian n=5000 has p below float32 tiny (~1e-38); float32 p used to underflow to 0.
+    row = run_checks.check_screen_gaussian_float32_p("cpu", 5000, 100)
+    assert row["p_underflow"] == 0 and row["pass"]
+
+
 def test_float32_report_does_not_gate(tmp_path):
     checks = [{"check": "ok", "n": 1, "m": 1, "pass": True}]
     bad = [{"check": "lasso_gaussian_path", "n": 1, "m": 1, "beta_max_abs_err": 1.0}]
     assert run_checks.write_report(checks, tmp_path, "cpu", bad)
     report = json.loads((tmp_path / "latest.json").read_text())
     assert report["all_pass"] and report["float32_accuracy"] == bad
-    row = "| lasso_gaussian_path | 1 | 1 | 1 | - | - | - | - |"
+    row = "| lasso_gaussian_path | 1 | 1 | 1 | - | - | - | - | - |"
     assert row in (tmp_path / "latest.md").read_text()

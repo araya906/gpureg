@@ -24,7 +24,8 @@ from gpureg import cox_screen, glm_screen, lasso_cv
 _SK_L1 = ({"l1_ratio": 1.0} if tuple(int(v) for v in sklearn.__version__.split(".")[:2]) >= (1, 8)
           else {"penalty": "l1"})
 TOL = {"beta_abs": 1e-5, "se_rel": 1e-4, "log10p_abs": 1e-3, "lasso_gauss_abs": 1e-5,
-       "lasso_binom_abs": 1e-3, "lasso_f32_abs": 1e-4, "screen_f32_beta_abs": 1e-4}
+       "lasso_binom_abs": 1e-3, "lasso_f32_abs": 1e-4, "screen_f32_beta_abs": 1e-4,
+       "screen_f32_log10p_rel": 1e-4}
 SM_FAMILIES = {"gaussian": sm.families.Gaussian(), "binomial": sm.families.Binomial(),
                "poisson": sm.families.Poisson()}
 
@@ -157,13 +158,15 @@ def float32_screen(kind, n, m, seed, device, ties="efron"):
     hi = _fit_screen(kind, C, F, out, ties, device, torch.float64)
     beta, se = lo["beta"].to_numpy(np.float64), lo["se"].to_numpy(np.float64)
     p_lo, p_hi = lo["p"].to_numpy(np.float64), hi["p"].to_numpy()
-    shown = p_hi >= np.finfo(np.float32).tiny  # smaller p underflow in float32 output
+    shown = (p_lo > 0) & (p_hi > 0)  # p is float64 for any fit dtype; 0 only on true underflow
     p_err = np.abs(_neg_log10(p_lo[shown]) - _neg_log10(p_hi[shown]))
+    p_rel = p_err / np.maximum(_neg_log10(p_hi[shown]), 1.0)
     return {"check": _screen_name(kind, ties), "n": n, "m": m,
             "beta_max_abs_err": float(np.abs(beta - hi["beta"].to_numpy()).max()),
             "se_max_rel_err": float((np.abs(se - hi["se"].to_numpy()) / hi["se"].to_numpy()).max()),
             "log10p_max_abs_err": float(p_err.max()) if p_err.size else 0.0,
-            "p_underflow": int((~shown).sum()), "converged_frac": float(lo["converged"].mean())}
+            "log10p_max_rel_err": float(p_rel.max()) if p_rel.size else 0.0,
+            "p_underflow": int(((p_lo == 0) & (p_hi > 0)).sum()), "converged_frac": float(lo["converged"].mean())}
 
 
 def check_lasso_gaussian_float32(device, n=1000, p=50):
@@ -184,6 +187,15 @@ def check_screen_binomial_float32(device, n, m):
             "pass": ok}
 
 
+def check_screen_gaussian_float32_p(device, n, m):
+    """float32 gaussian screen: p-values (some below float32 tiny) match float64 (gated)."""
+    row = float32_screen("gaussian", n, m, 1, device)
+    ok = row["p_underflow"] == 0 and row["log10p_max_rel_err"] <= TOL["screen_f32_log10p_rel"]
+    return {"check": "screen_gaussian_float32_pvalues", "n": n, "m": m,
+            "log10p_max_rel_err": row["log10p_max_rel_err"], "p_underflow": row["p_underflow"],
+            "pass": ok}
+
+
 def run_float32(quick, device):
     n, m = (500, 10) if quick else (5000, 100)
     rows = [float32_screen(kind, n, m, 1, device) for kind in ("gaussian", "binomial", "poisson")]
@@ -199,6 +211,7 @@ def run_all(quick, device):
         for ties in ("efron", "breslow"):
             checks.append(check_screen("cox", n, m, 2, device, ties))
     checks.append(check_screen_binomial_float32(device, *sizes[-1]))
+    checks.append(check_screen_gaussian_float32_p(device, *sizes[-1]))
     for fn in (check_lasso_gaussian, check_lasso_gaussian_float32, check_lasso_binomial,
                check_lasso_cox_recovery):
         checks.append(fn(device))
@@ -206,13 +219,15 @@ def run_all(quick, device):
 
 
 def _float32_lines(rows):
-    keys = ("beta_max_abs_err", "se_max_rel_err", "log10p_max_abs_err", "p_underflow",
+    keys = ("beta_max_abs_err", "se_max_rel_err", "log10p_max_abs_err", "log10p_max_rel_err",
+            "p_underflow",
             "converged_frac")
     lines = ["", "## float32 vs float64 (informational, not gated)", "",
-             "-log10 p compared where p >= float32 tiny; smaller p counted as underflow.", "",
-             "| fit | n | m | beta max abs | se max rel | -log10 p max abs | p underflow "
-             "| converged |",
-             "|---|---|---|---|---|---|---|---|"]
+             "p is returned in float64 for every fit dtype; underflow counts p == 0 in float32 "
+             "fits only.", "",
+             "| fit | n | m | beta max abs | se max rel | -log10 p max abs | -log10 p max rel "
+             "| p underflow | converged |",
+             "|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         cells = [f"{r[k]:.2g}" if k in r else "-" for k in keys]
         lines.append(f"| {r['check']} | {r['n']} | {r['m']} | " + " | ".join(cells) + " |")

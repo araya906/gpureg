@@ -17,8 +17,11 @@ class BatchFit(NamedTuple):
 
 
 def wald(beta, se):
-    """Wald z statistics and two-sided normal p-values."""
-    z = beta / se
+    """Wald z statistics and two-sided normal p-values, in float64 on the CPU.
+
+    float32 p would underflow to 0 below ~1e-38, so p is always computed in float64.
+    """
+    z = beta.detach().cpu().double() / se.detach().cpu().double()
     return z, torch.special.erfc(z.abs() / math.sqrt(2.0))
 
 
