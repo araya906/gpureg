@@ -15,6 +15,7 @@ import torch.nn.functional as F
 
 from ._device import check_dtype, resolve_device
 from ._inputs import as_matrix, as_vector, require_complete
+from ._newton import _rounding_floor
 from ._risksets import build_risk_sets, group_sum, reverse_cumsum
 
 LASSO_FAMILIES = ("gaussian", "binomial", "cox")
@@ -293,9 +294,11 @@ def lasso_cv(X, y=None, *, family="gaussian", time=None, event=None, unpenalized
     family: 'gaussian' or 'binomial' (pass y), or 'cox' (pass time and event; Breslow ties).
     unpenalized: column names or indices kept in every model (e.g. confounders).
     n_folds=0 fits the path on the full data only.
+    tol (max coefficient change) is raised to the dtype's rounding floor (float32: ~1e-6).
     """
     dev = resolve_device(device)
     check_dtype(dev, dtype)
+    tol = _rounding_floor(dtype, tol)
     prob = _lasso_problem(X, y, family, time, event, unpenalized, n_folds, seed, dev, dtype)
     obj = _lasso_objective(prob, prob.W)
     L = torch.full((prob.W.shape[0],), _lasso_lipschitz(prob), device=dev, dtype=dtype)

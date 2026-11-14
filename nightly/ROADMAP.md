@@ -5,7 +5,7 @@
 - [x] Lasso float32: the fixed `1e-12 * |f|` acceptance slack in `_backtrack` is below float32 rounding, so L keeps doubling and the path stalls (coef error 0.6 vs float64 in the report). Make the slack dtype-aware (e.g. a few `finfo(dtype).eps`); a quick trial gave ~1e-6.
 - [x] float32 screens: default `tol=1e-9` is below float32 resolution, so `converged` can be False on good fits (binomial 98%); scale the default tol by dtype.
 - [x] float32 p-values: return p in float64 (float32 p underflows below ~1e-38; 1-2 of 100 features in the float32 report).
-- [ ] Lasso float32 tol: a float32 fit with tol=1e-10 runs to max_iter and warns, although coefficients match float64 to ~3e-7; floor tol at the dtype's rounding error as in `_newton`.
+- [x] Lasso float32 tol: a float32 fit with tol=1e-10 runs to max_iter and warns, although coefficients match float64 to ~3e-7; floor tol at the dtype's rounding error as in `_newton`.
 - [ ] Add a scikit-survival `CoxnetSurvivalAnalysis` reference for Cox lasso (optional dependency; skip if unavailable).
 - [ ] Add a separation / constant-feature scenario and check that `singular` and `converged` flags are set sensibly.
 - [ ] GLM: support offsets (e.g. log person-time for poisson).

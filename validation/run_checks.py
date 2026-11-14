@@ -9,6 +9,7 @@ import json
 import platform
 import sys
 import time
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -170,12 +171,15 @@ def float32_screen(kind, n, m, seed, device, ties="efron"):
 
 
 def check_lasso_gaussian_float32(device, n=1000, p=50):
-    """float32 lasso path against float64 (gated: the backtracking slack is dtype-aware)."""
-    lo = _lasso_gaussian_path(device, n, p, torch.float32)[2]
+    """float32 lasso path vs float64, without hitting max_iter (gated: slack and tol dtype-aware)."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        lo = _lasso_gaussian_path(device, n, p, torch.float32)[2]
+    hit_max_iter = any("max_iter" in str(w.message) for w in caught)
     hi = _lasso_gaussian_path(device, n, p)[2]
     err = float(np.abs(lo.coef.astype(np.float64) - hi.coef).max())
-    return {"check": "lasso_gaussian_float32_vs_float64", "n": n, "m": p,
-            "coef_max_abs_err": err, "pass": err <= TOL["lasso_f32_abs"]}
+    return {"check": "lasso_gaussian_float32_vs_float64", "n": n, "m": p, "coef_max_abs_err": err,
+            "hit_max_iter": hit_max_iter, "pass": err <= TOL["lasso_f32_abs"] and not hit_max_iter}
 
 
 def check_screen_binomial_float32(device, n, m):

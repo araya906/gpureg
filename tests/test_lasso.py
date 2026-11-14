@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest
 import torch
@@ -49,3 +51,12 @@ def test_float32_path_matches_float64():
     fits = [lasso_cv(X, y, family="gaussian", n_folds=0, n_lambda=10, device="cpu", dtype=dt,
                      tol=1e-10, max_iter=20000) for dt in (torch.float32, torch.float64)]
     np.testing.assert_allclose(fits[0].coef.astype(np.float64), fits[1].coef, atol=1e-4)
+
+
+def test_float32_tol_floored_at_rounding_error():
+    X = _standardized(300, 20, 6)
+    y = X[:, :3] @ np.array([1.0, -0.8, 0.5]) + np.random.default_rng(7).normal(size=300)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        lasso_cv(X, y, family="gaussian", n_folds=0, n_lambda=10, device="cpu",
+                 dtype=torch.float32, tol=1e-10, max_iter=2000)
