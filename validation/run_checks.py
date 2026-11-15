@@ -21,11 +21,17 @@ from sklearn.linear_model import Lasso, LogisticRegression
 
 from gpureg import cox_screen, glm_screen, lasso_cv
 
+try:  # optional reference for the Cox lasso (pip install scikit-survival)
+    from sksurv.linear_model import CoxnetSurvivalAnalysis
+    from sksurv.util import Surv
+except ImportError:
+    CoxnetSurvivalAnalysis = None
+
 # scikit-learn >= 1.8 deprecates `penalty` (removed in 1.10); l1_ratio=1 selects pure L1.
 _SK_L1 = ({"l1_ratio": 1.0} if tuple(int(v) for v in sklearn.__version__.split(".")[:2]) >= (1, 8)
           else {"penalty": "l1"})
 TOL = {"beta_abs": 1e-5, "se_rel": 1e-4, "log10p_abs": 1e-3, "lasso_gauss_abs": 1e-5,
-       "lasso_binom_abs": 1e-3, "lasso_f32_abs": 1e-4, "screen_f32_beta_abs": 1e-4,
+       "lasso_binom_abs": 1e-3, "lasso_cox_abs": 1e-4, "lasso_f32_abs": 1e-4, "screen_f32_beta_abs": 1e-4,
        "screen_f32_log10p_rel": 1e-4}
 SM_FAMILIES = {"gaussian": sm.families.Gaussian(), "binomial": sm.families.Binomial(),
                "poisson": sm.families.Poisson()}
@@ -152,6 +158,26 @@ def check_lasso_cox_recovery(device, n=2000, p=50):
             "pass": {"x0", "x1", "x2"} <= chosen}
 
 
+def check_lasso_cox(device, n=1000, p=30):
+    """Breslow Cox lasso path (tied times) vs scikit-survival Coxnet; skipped if not installed."""
+    row = {"check": "lasso_cox_vs_sksurv", "n": n, "m": p}
+    if CoxnetSurvivalAnalysis is None:
+        return {**row, "skipped": "scikit-survival not installed", "pass": True}
+    X = _standardized(n, p, 16)
+    rng = np.random.default_rng(17)
+    t_event = rng.exponential(1 / np.exp(X[:, :3] @ np.array([0.9, -0.7, 0.6])))
+    t_cens = rng.exponential(2.0, size=n)
+    time_, event = np.ceil(np.minimum(t_event, t_cens) * 20), t_event <= t_cens
+    res = lasso_cv(X, family="cox", time=time_, event=event.astype(float), n_folds=0,
+                   n_lambda=10, device=device, tol=1e-10, max_iter=50000)
+    err = 0.0
+    for i in (3, 6, 9):
+        ref = CoxnetSurvivalAnalysis(l1_ratio=1.0, alphas=[res.lambdas[i]], tol=1e-12,
+                                     max_iter=1000000).fit(X, Surv.from_arrays(event, time_))
+        err = max(err, float(np.abs(res.coef[i] - ref.coef_[:, 0]).max()))
+    return {**row, "coef_max_abs_err": err, "pass": err <= TOL["lasso_cox_abs"]}
+
+
 def float32_screen(kind, n, m, seed, device, ties="efron"):
     """Same data fitted in float32 and float64: max discrepancies, no pass/fail."""
     C, F, out = simulate_screen(kind, n, m, seed)
@@ -217,7 +243,7 @@ def run_all(quick, device):
     checks.append(check_screen_binomial_float32(device, *sizes[-1]))
     checks.append(check_screen_gaussian_float32_p(device, *sizes[-1]))
     for fn in (check_lasso_gaussian, check_lasso_gaussian_float32, check_lasso_binomial,
-               check_lasso_cox_recovery):
+               check_lasso_cox, check_lasso_cox_recovery):
         checks.append(fn(device))
     return checks
 
@@ -238,6 +264,12 @@ def _float32_lines(rows):
     return lines
 
 
+def _pass_cell(check):
+    if check.get("skipped"):
+        return f"skipped ({check['skipped']})"
+    return "yes" if check["pass"] else "NO"
+
+
 def write_report(checks, out_dir, device, float32=()):
     out_dir.mkdir(parents=True, exist_ok=True)
     report = {"timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -249,7 +281,7 @@ def write_report(checks, out_dir, device, float32=()):
         fh.write(json.dumps({k: report[k] for k in ("timestamp", "device", "all_pass")}) + "\n")
     lines = [f"# Validation {report['timestamp']} ({device})", "", "| check | n | m | pass |",
              "|---|---|---|---|"]
-    lines += [f"| {c['check']} | {c['n']} | {c['m']} | {'yes' if c['pass'] else 'NO'} |" for c in checks]
+    lines += [f"| {c['check']} | {c['n']} | {c['m']} | {_pass_cell(c)} |" for c in checks]
     if float32:
         lines += _float32_lines(float32)
     (out_dir / "latest.md").write_text("\n".join(lines) + "\n")

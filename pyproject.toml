@@ -13,6 +13,7 @@ dependencies = ["torch>=2.0", "numpy", "pandas"]
 
 [project.optional-dependencies]
 test = ["pytest", "statsmodels", "scikit-learn"]
+survival = ["scikit-survival"]  # optional Coxnet reference in validation
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -55,4 +55,4 @@ Inputs can be numpy arrays or pandas objects; DataFrame column names are kept.
 
 ## Tests
 
-`tests/` compare results against statsmodels (GLM, PHReg) and scikit-learn (`Lasso`), and check that CV lasso recovers simulated signals. Run with `pytest` (CPU is enough).
+`tests/` compare results against statsmodels (GLM, PHReg) and scikit-learn (`Lasso`), the Cox lasso against scikit-survival (`CoxnetSurvivalAnalysis`, optional: `pip install -e ".[survival]"`, skipped if absent), and check that CV lasso recovers simulated signals. Run with `pytest` (CPU is enough).

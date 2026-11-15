@@ -37,3 +37,21 @@ def test_float32_report_does_not_gate(tmp_path):
     assert report["all_pass"] and report["float32_accuracy"] == bad
     row = "| lasso_gaussian_path | 1 | 1 | 1 | - | - | - | - | - |"
     assert row in (tmp_path / "latest.md").read_text()
+
+
+def test_lasso_cox_matches_sksurv():
+    pytest.importorskip("sksurv")
+    row = run_checks.check_lasso_cox("cpu", n=400, p=10)
+    assert "skipped" not in row and row["pass"]
+
+
+def test_lasso_cox_skips_without_sksurv(monkeypatch):
+    monkeypatch.setattr(run_checks, "CoxnetSurvivalAnalysis", None)
+    row = run_checks.check_lasso_cox("cpu")
+    assert row["pass"] and row["skipped"]
+
+
+def test_skipped_check_is_marked_in_report(tmp_path):
+    checks = [{"check": "opt", "n": 1, "m": 1, "skipped": "x not installed", "pass": True}]
+    assert run_checks.write_report(checks, tmp_path, "cpu")
+    assert "| opt | 1 | 1 | skipped (x not installed) |" in (tmp_path / "latest.md").read_text()

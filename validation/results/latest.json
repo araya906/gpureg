@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-14T01:44:12+00:00",
+  "timestamp": "2026-11-15T01:42:35+00:00",
   "device": "cpu",
   "torch": "2.15.0+cu132",
   "python": "3.13.18",
@@ -14,8 +14,8 @@
       "log10p_max_abs_err": 2.1316282072803006e-14,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.004771188999995957,
-      "time_reference_s": 0.009880260999977963
+      "time_gpureg_s": 0.004792956000017057,
+      "time_reference_s": 0.011679434000029687
     },
     {
       "check": "screen_binomial",
@@ -26,8 +26,8 @@
       "log10p_max_abs_err": 9.367675941618359e-07,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.0029831930000341345,
-      "time_reference_s": 0.011639610999964134
+      "time_gpureg_s": 0.003147618000014063,
+      "time_reference_s": 0.014080541999987872
     },
     {
       "check": "screen_poisson",
@@ -38,8 +38,8 @@
       "log10p_max_abs_err": 2.724529712949675e-09,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.002732702999992398,
-      "time_reference_s": 0.01583683500001598
+      "time_gpureg_s": 0.002972066999973322,
+      "time_reference_s": 0.014195107000034568
     },
     {
       "check": "screen_cox_efron",
@@ -50,8 +50,8 @@
       "log10p_max_abs_err": 1.2124025339232958e-08,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.005952367000020331,
-      "time_reference_s": 0.16782646000001478
+      "time_gpureg_s": 0.0076146760000028735,
+      "time_reference_s": 0.21133325999994668
     },
     {
       "check": "screen_cox_breslow",
@@ -62,8 +62,8 @@
       "log10p_max_abs_err": 1.0070416944785165e-08,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.007101889000011852,
-      "time_reference_s": 0.09339500400000134
+      "time_gpureg_s": 0.007125826999981655,
+      "time_reference_s": 0.1087792170000057
     },
     {
       "check": "screen_gaussian",
@@ -74,8 +74,8 @@
       "log10p_max_abs_err": 8.526512829121202e-14,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.045745252000017445,
-      "time_reference_s": 0.3159478289999811
+      "time_gpureg_s": 0.040681693000010455,
+      "time_reference_s": 0.36371777699997665
     },
     {
       "check": "screen_binomial",
@@ -86,8 +86,8 @@
       "log10p_max_abs_err": 2.1016972183929283e-05,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.06374000199997454,
-      "time_reference_s": 0.373935323000012
+      "time_gpureg_s": 0.06552790300003153,
+      "time_reference_s": 0.4860236769999915
     },
     {
       "check": "screen_poisson",
@@ -98,8 +98,8 @@
       "log10p_max_abs_err": 4.666993191904112e-08,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.057486761000006936,
-      "time_reference_s": 0.3877242039999942
+      "time_gpureg_s": 0.07062385199998289,
+      "time_reference_s": 0.5425030729999776
     },
     {
       "check": "screen_cox_efron",
@@ -110,8 +110,8 @@
       "log10p_max_abs_err": 2.6997582835974754e-08,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.35083531700001913,
-      "time_reference_s": 5.165946099999985
+      "time_gpureg_s": 0.2984638700000346,
+      "time_reference_s": 6.321084950999989
     },
     {
       "check": "screen_cox_breslow",
@@ -122,8 +122,8 @@
       "log10p_max_abs_err": 2.0119529153816984e-08,
       "all_converged": true,
       "pass": true,
-      "time_gpureg_s": 0.3347800000000234,
-      "time_reference_s": 3.196296001999997
+      "time_gpureg_s": 0.34192094599995926,
+      "time_reference_s": 4.012595205000025
     },
     {
       "check": "screen_binomial_float32_vs_float64",
@@ -160,7 +160,14 @@
       "check": "lasso_binomial_vs_sklearn",
       "n": 1000,
       "m": 20,
-      "coef_max_abs_err": 3.115152580335234e-10,
+      "coef_max_abs_err": 2.951512367843634e-10,
+      "pass": true
+    },
+    {
+      "check": "lasso_cox_vs_sksurv",
+      "n": 1000,
+      "m": 30,
+      "coef_max_abs_err": 1.7023246945413462e-06,
       "pass": true
     },
     {
