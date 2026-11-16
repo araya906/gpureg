@@ -226,6 +226,41 @@ def check_screen_gaussian_float32_p(device, n, m):
             "pass": ok}
 
 
+def degenerate_features(kind, out, C, seed):
+    """Columns: ordinary, constant, collinear with a covariate, constant after NaN drop, separating.
+
+    The separating column is 1 exactly where y == 1 (binomial), y == 0 (poisson) or event == 1
+    (cox), so its MLE is infinite; gaussian has no such column.
+    """
+    rng = np.random.default_rng(seed)
+    n = C.shape[0]
+    half_nan = np.where(rng.random(n) < 0.5, np.nan, 3.0)
+    cols = [rng.normal(size=n), np.ones(n), 2.0 * C[:, 0] + 1.0, half_nan]
+    if kind == "cox":
+        cols.append(out[1])
+    elif kind != "gaussian":
+        cols.append((out == (1.0 if kind == "binomial" else 0.0)).astype(float))
+    return np.column_stack(cols)
+
+
+def _degenerate_ok(res):
+    """Ordinary column clean; aliased columns singular with NaN se/p; separation not significant."""
+    singular, conv, se, p = (res[c].to_numpy() for c in ("singular", "converged", "se", "p"))
+    ordinary = conv[0] and not singular[0] and np.isfinite(se[0]) and np.isfinite(p[0])
+    aliased = singular[1:4].all() and np.isnan(se[1:4]).all() and np.isnan(p[1:4]).all()
+    separated = all(not (conv[j] and not singular[j] and p[j] < 0.5) for j in range(4, len(p)))
+    return bool(ordinary and aliased and separated)
+
+
+def check_degenerate(kind, device, n=500):
+    """Constant, collinear and separating features in float64 and float32 (gated)."""
+    C, _, out = simulate_screen(kind, n, 2, 3)
+    F = degenerate_features(kind, out, C, 3)
+    ok = {f"pass_{name}": _degenerate_ok(_fit_screen(kind, C, F, out, "efron", device, dt))
+          for name, dt in (("float64", torch.float64), ("float32", torch.float32))}
+    return {"check": f"degenerate_{kind}", "n": n, "m": F.shape[1], **ok, "pass": all(ok.values())}
+
+
 def run_float32(quick, device):
     n, m = (500, 10) if quick else (5000, 100)
     rows = [float32_screen(kind, n, m, 1, device) for kind in ("gaussian", "binomial", "poisson")]
@@ -242,6 +277,8 @@ def run_all(quick, device):
             checks.append(check_screen("cox", n, m, 2, device, ties))
     checks.append(check_screen_binomial_float32(device, *sizes[-1]))
     checks.append(check_screen_gaussian_float32_p(device, *sizes[-1]))
+    for kind in ("gaussian", "binomial", "poisson", "cox"):
+        checks.append(check_degenerate(kind, device))
     for fn in (check_lasso_gaussian, check_lasso_gaussian_float32, check_lasso_binomial,
                check_lasso_cox, check_lasso_cox_recovery):
         checks.append(fn(device))

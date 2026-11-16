@@ -78,11 +78,19 @@ def _cox_objective(X, event, w, rs, efron):
     return fun
 
 
+def _constant_columns(X, w):
+    """Models with a covariate constant over their used rows (no information without intercept)."""
+    used = (w > 0).unsqueeze(-1)
+    hi = X.masked_fill(~used, float("-inf")).amax(1)
+    lo = X.masked_fill(~used, float("inf")).amin(1)
+    return (hi <= lo).any(1)
+
+
 def _fit_cox_batch(X, event, w, rs, efron, max_iter, tol):
     fun = _cox_objective(X, event, w, rs, efron)
     beta0 = X.new_zeros(X.shape[0], X.shape[2])
     beta, ll, info, conv, n_iter = newton_maximize(fun, beta0, max_iter, tol)
-    cov, singular = spd_inverse(info)
+    cov, singular = spd_inverse(info, _constant_columns(X, w))
     se = torch.sqrt(torch.diagonal(cov, dim1=1, dim2=2).clamp(min=0))
     return BatchFit(beta, se, ll, conv, n_iter, singular, w.sum(1))
 

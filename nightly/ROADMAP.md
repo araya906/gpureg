@@ -7,7 +7,8 @@
 - [x] float32 p-values: return p in float64 (float32 p underflows below ~1e-38; 1-2 of 100 features in the float32 report).
 - [x] Lasso float32 tol: a float32 fit with tol=1e-10 runs to max_iter and warns, although coefficients match float64 to ~3e-7; floor tol at the dtype's rounding error as in `_newton`.
 - [x] Add a scikit-survival `CoxnetSurvivalAnalysis` reference for Cox lasso (optional dependency; skip if unavailable).
-- [ ] Add a separation / constant-feature scenario and check that `singular` and `converged` flags are set sensibly.
+- [x] Add a separation / constant-feature scenario and check that `singular` and `converged` flags are set sensibly.
+- [ ] Flag infinite estimates explicitly (quasi-separation in GLM, monotone likelihood in Cox): today they report `converged=True` with huge SE and p near 1, as R does but without R's warning.
 - [ ] GLM: support offsets (e.g. log person-time for poisson).
 - [ ] Cox: support strata.
 - [ ] Cox: support start-stop (left-truncated) data.

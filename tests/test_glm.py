@@ -63,3 +63,19 @@ def test_float32_fit_returns_float64_pvalues():
     res = glm_fit(x, y, device="cpu", dtype=torch.float32)
     assert res["p"].dtype == np.float64 and res["beta"].dtype == np.float32
     assert 0 < res["p"].iloc[1] < np.finfo(np.float32).tiny
+
+
+@pytest.mark.parametrize("dtype", [torch.float64, torch.float32])
+def test_constant_and_collinear_features_are_singular(dtype):
+    # A constant feature used to crash the whole screen (cholesky_inverse raised on singular H).
+    C, F, y = _simulate_glm("binomial")
+    F = np.column_stack([F[:, 0], np.ones(len(y)), 2.0 * C[:, 0] + 1.0])
+    res = glm_screen(F, y, C, family="binomial", dtype=dtype)
+    assert res["singular"].tolist() == [False, True, True]
+    assert np.isfinite(res["p"][0]) and res[["se", "p"]].iloc[1:].isna().all().all()
+
+
+def test_complete_separation_is_not_reported_as_converged():
+    C, F, y = _simulate_glm("binomial")
+    res = glm_screen(y[:, None], y, C, family="binomial")
+    assert not res["converged"][0] and res["p"][0] > 0.5

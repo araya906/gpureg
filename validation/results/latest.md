@@ -1,4 +1,4 @@
-# Validation 2026-11-15T01:42:35+00:00 (cpu)
+# Validation 2026-11-16T01:43:04+00:00 (cpu)
 
 | check | n | m | pass |
 |---|---|---|---|
@@ -14,6 +14,10 @@
 | screen_cox_breslow | 5000 | 100 | yes |
 | screen_binomial_float32_vs_float64 | 5000 | 100 | yes |
 | screen_gaussian_float32_pvalues | 5000 | 100 | yes |
+| degenerate_gaussian | 500 | 4 | yes |
+| degenerate_binomial | 500 | 5 | yes |
+| degenerate_poisson | 500 | 5 | yes |
+| degenerate_cox | 500 | 5 | yes |
 | lasso_gaussian_vs_sklearn | 1000 | 50 | yes |
 | lasso_gaussian_float32_vs_float64 | 1000 | 50 | yes |
 | lasso_binomial_vs_sklearn | 1000 | 20 | yes |

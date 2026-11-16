@@ -46,3 +46,12 @@ def test_single_fit_matches_statsmodels(ties):
     ref = sm.PHReg(time, X, status=event, ties=ties).fit()
     np.testing.assert_allclose(res["beta"], ref.params, atol=1e-6)
     np.testing.assert_allclose(res["se"], ref.bse, rtol=1e-5)
+
+
+def test_constant_feature_is_singular():
+    # Without an intercept a constant column has only rounding-noise information.
+    C, F, time, event = _simulate_cox()
+    half = np.where(np.arange(len(time)) % 2 == 0, np.nan, 3.0)
+    res = cox_screen(np.column_stack([F[:, 0], np.ones(len(time)), half]), time, event, C)
+    assert res["singular"].tolist() == [False, True, True]
+    assert res[["se", "p"]].iloc[1:].isna().all().all()

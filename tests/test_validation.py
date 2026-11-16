@@ -55,3 +55,9 @@ def test_skipped_check_is_marked_in_report(tmp_path):
     checks = [{"check": "opt", "n": 1, "m": 1, "skipped": "x not installed", "pass": True}]
     assert run_checks.write_report(checks, tmp_path, "cpu")
     assert "| opt | 1 | 1 | skipped (x not installed) |" in (tmp_path / "latest.md").read_text()
+
+
+@pytest.mark.parametrize("kind", ["gaussian", "binomial", "poisson", "cox"])
+def test_degenerate_features_check_passes(kind):
+    row = run_checks.check_degenerate(kind, "cpu", n=300)
+    assert row["pass_float64"] and row["pass_float32"]

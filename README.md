@@ -44,7 +44,7 @@ Inputs can be numpy arrays or pandas objects; DataFrame column names are kept.
 - **Screening** builds a `(models, n, k)` design per chunk; chunk size is set from free GPU memory (`chunk_size=` overrides).
 - **Missing feature values** (NaN) are handled per model with zero weights, so each model uses its own complete rows. Outcome and covariates must be complete.
 - **Precision**: `float64` by default. Consumer GPUs run float64 much slower than float32; pass `dtype=torch.float32` for speed at the cost of accuracy in SEs and very small p-values.
-- **Diagnostics** per model: `converged`, `n_iter`, `singular` (information matrix not invertible, SEs unreliable), `n_obs`.
+- **Diagnostics** per model: `converged`, `n_iter`, `singular` (information matrix rank-deficient, e.g. a constant or collinear feature; `se`, `z` and `p` are then NaN), `n_obs`. Separated features (infinite MLE) show `converged=False` or very large SEs with p near 1.
 - **Lasso standardization** uses population SDs on the full data (also for CV folds); coefficients are returned on the original scale. CV error is held-out deviance per observation; Cox uses the Verweij–van Houwelingen cross-validated partial likelihood.
 
 ## Caveats
