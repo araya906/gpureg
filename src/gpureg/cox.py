@@ -89,10 +89,10 @@ def _constant_columns(X, w):
 def _fit_cox_batch(X, event, w, rs, efron, max_iter, tol):
     fun = _cox_objective(X, event, w, rs, efron)
     beta0 = X.new_zeros(X.shape[0], X.shape[2])
-    beta, ll, info, conv, n_iter = newton_maximize(fun, beta0, max_iter, tol)
+    beta, ll, info, conv, n_iter, infinite = newton_maximize(fun, beta0, max_iter, tol)
     cov, singular = spd_inverse(info, _constant_columns(X, w))
     se = torch.sqrt(torch.diagonal(cov, dim1=1, dim2=2).clamp(min=0))
-    return BatchFit(beta, se, ll, conv, n_iter, singular, w.sum(1))
+    return BatchFit(beta, se, ll, conv, n_iter, singular, w.sum(1), infinite & ~singular[:, None])
 
 
 def cox_screen(features, time, event, covariates=None, ties="efron", device=None,

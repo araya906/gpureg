@@ -56,12 +56,12 @@ def _glm_dispersion(family, X, y, w, beta, n_obs):
 def _fit_glm_batch(X, y, w, family, max_iter, tol):
     fun = _glm_objective(X, y, w, family)
     beta0 = X.new_zeros(X.shape[0], X.shape[2])
-    beta, ll, info, conv, n_iter = newton_maximize(fun, beta0, max_iter, tol)
+    beta, ll, info, conv, n_iter, infinite = newton_maximize(fun, beta0, max_iter, tol)
     cov, singular = spd_inverse(info)
     n_obs = w.sum(1)
     phi = _glm_dispersion(family, X, y, w, beta, n_obs)
     se = torch.sqrt(torch.diagonal(cov, dim1=1, dim2=2).clamp(min=0) * phi[:, None])
-    return BatchFit(beta, se, ll, conv, n_iter, singular, n_obs)
+    return BatchFit(beta, se, ll, conv, n_iter, singular, n_obs, infinite & ~singular[:, None])
 
 
 def glm_screen(features, y, covariates=None, family="binomial", device=None,

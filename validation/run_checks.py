@@ -79,9 +79,11 @@ def compare_screen(res, ref):
     se_err = float((np.abs(res["se"].to_numpy() - ref[:, 1]) / ref[:, 1]).max())
     p_err = float(np.abs(_neg_log10(res["p"].to_numpy()) - _neg_log10(ref[:, 2])).max())
     ok = (beta_err <= TOL["beta_abs"] and se_err <= TOL["se_rel"]
-          and p_err <= TOL["log10p_abs"] and bool(res["converged"].all()))
+          and p_err <= TOL["log10p_abs"] and bool(res["converged"].all())
+          and not res["infinite"].any())
     return {"beta_max_abs_err": beta_err, "se_max_rel_err": se_err,
-            "log10p_max_abs_err": p_err, "all_converged": bool(res["converged"].all()), "pass": ok}
+            "log10p_max_abs_err": p_err, "all_converged": bool(res["converged"].all()),
+            "n_infinite": int(res["infinite"].sum()), "pass": ok}
 
 
 def _fit_screen(kind, C, F, out, ties, device, dtype=torch.float64):
@@ -227,28 +229,33 @@ def check_screen_gaussian_float32_p(device, n, m):
 
 
 def degenerate_features(kind, out, C, seed):
-    """Columns: ordinary, constant, collinear with a covariate, constant after NaN drop, separating.
+    """Columns: ordinary, constant, collinear with a covariate, constant after NaN drop, then
+    separating and quasi-separating.
 
     The separating column is 1 exactly where y == 1 (binomial), y == 0 (poisson) or event == 1
-    (cox), so its MLE is infinite; gaussian has no such column.
+    (cox); the quasi-separating one is 1 on a random half of those rows (cox: of censored rows,
+    a monotone likelihood). Both MLEs are infinite; gaussian has no such columns.
     """
     rng = np.random.default_rng(seed)
     n = C.shape[0]
     half_nan = np.where(rng.random(n) < 0.5, np.nan, 3.0)
     cols = [rng.normal(size=n), np.ones(n), 2.0 * C[:, 0] + 1.0, half_nan]
-    if kind == "cox":
-        cols.append(out[1])
-    elif kind != "gaussian":
-        cols.append((out == (1.0 if kind == "binomial" else 0.0)).astype(float))
-    return np.column_stack(cols)
+    if kind == "gaussian":
+        return np.column_stack(cols)
+    sep = out[1] if kind == "cox" else (out == (1.0 if kind == "binomial" else 0.0)).astype(float)
+    quasi = (out[1] == 0) if kind == "cox" else (sep == 1)
+    return np.column_stack(cols + [sep, (quasi & (rng.random(n) < 0.5)).astype(float)])
 
 
 def _degenerate_ok(res):
-    """Ordinary column clean; aliased columns singular with NaN se/p; separation not significant."""
-    singular, conv, se, p = (res[c].to_numpy() for c in ("singular", "converged", "se", "p"))
-    ordinary = conv[0] and not singular[0] and np.isfinite(se[0]) and np.isfinite(p[0])
+    """Ordinary column clean; aliased columns singular with NaN se/p; separated columns flagged
+    infinite (or singular) and not significant."""
+    singular, conv, se, p, inf = (res[c].to_numpy()
+                                  for c in ("singular", "converged", "se", "p", "infinite"))
+    ordinary = conv[0] and not singular[0] and not inf[0] and np.isfinite(p[0])
     aliased = singular[1:4].all() and np.isnan(se[1:4]).all() and np.isnan(p[1:4]).all()
-    separated = all(not (conv[j] and not singular[j] and p[j] < 0.5) for j in range(4, len(p)))
+    separated = all((inf[j] or singular[j]) and not (conv[j] and not singular[j] and p[j] < 0.5)
+                    for j in range(4, len(p)))
     return bool(ordinary and aliased and separated)
 
 
@@ -256,8 +263,10 @@ def check_degenerate(kind, device, n=500):
     """Constant, collinear and separating features in float64 and float32 (gated)."""
     C, _, out = simulate_screen(kind, n, 2, 3)
     F = degenerate_features(kind, out, C, 3)
-    ok = {f"pass_{name}": _degenerate_ok(_fit_screen(kind, C, F, out, "efron", device, dt))
-          for name, dt in (("float64", torch.float64), ("float32", torch.float32))}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # the 'infinite' warning is expected here
+        ok = {f"pass_{name}": _degenerate_ok(_fit_screen(kind, C, F, out, "efron", device, dt))
+              for name, dt in (("float64", torch.float64), ("float32", torch.float32))}
     return {"check": f"degenerate_{kind}", "n": n, "m": F.shape[1], **ok, "pass": all(ok.values())}
 
 

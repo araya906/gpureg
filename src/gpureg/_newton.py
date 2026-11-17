@@ -36,12 +36,23 @@ def _halve_until_better(fun, beta, step, ll_old, max_halving):
     return cand, ll, score, info, worse
 
 
+def _diverging(beta, score, info, tol):
+    """(b, k) mask of coefficients whose remaining Newton step is large: infinite estimates.
+
+    As R's coxph: under separation or monotone likelihood the log-likelihood converges while
+    beta keeps moving by O(1) per step. Finite fits leave steps far below sqrt(tol).
+    """
+    step = spd_solve(info, score)
+    return step.abs() > tol ** 0.5 * beta.abs().clamp(min=1)
+
+
 def newton_maximize(fun, beta, max_iter=25, tol=None, max_halving=10):
     """Maximise a batch of concave log-likelihoods; fun(beta) -> (ll, score, information).
 
     Convergence uses the relative change in log-likelihood, as in R's coxph.
     tol (default 1e-9) is raised to the dtype's rounding floor (float32: ~1e-6).
-    Returns (beta, ll, information at beta, converged mask, iterations).
+    Returns (beta, ll, information at beta, converged mask, iterations, (b, k) mask of
+    coefficients that appear infinite).
     """
     tol = _rounding_floor(beta.dtype, 1e-9 if tol is None else tol)
     ll, score, info = fun(beta)
@@ -59,4 +70,4 @@ def newton_maximize(fun, beta, max_iter=25, tol=None, max_halving=10):
         done |= active & ~failed & small
         n_iter += active.long()
         ll = ll_new
-    return beta, ll, info, done, n_iter
+    return beta, ll, info, done, n_iter, _diverging(beta, score, info, tol)

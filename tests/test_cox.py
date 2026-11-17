@@ -55,3 +55,19 @@ def test_constant_feature_is_singular():
     res = cox_screen(np.column_stack([F[:, 0], np.ones(len(time)), half]), time, event, C)
     assert res["singular"].tolist() == [False, True, True]
     assert res[["se", "p"]].iloc[1:].isna().all().all()
+
+
+@pytest.mark.parametrize("ties", ["efron", "breslow"])
+def test_monotone_likelihood_is_flagged_infinite(ties):
+    # A group with no events: the partial likelihood keeps rising as its beta -> -inf.
+    C, F, time, event = _simulate_cox()
+    no_events = ((event == 0) & (np.arange(len(time)) % 2 == 0)).astype(float)
+    with pytest.warns(UserWarning, match="1 screened models"):
+        res = cox_screen(np.column_stack([F[:, 0], no_events]), time, event, C, ties=ties)
+    assert res["infinite"].tolist() == [False, True] and res["p"][1] > 0.5
+
+
+def test_cox_fit_regular_data_has_no_infinite_terms():
+    C, F, time, event = _simulate_cox()
+    res = cox_fit(np.column_stack([C, F]), time, event, device="cpu")
+    assert not res["infinite"].any()

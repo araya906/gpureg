@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest
 import statsmodels.api as sm
@@ -77,5 +79,33 @@ def test_constant_and_collinear_features_are_singular(dtype):
 
 def test_complete_separation_is_not_reported_as_converged():
     C, F, y = _simulate_glm("binomial")
-    res = glm_screen(y[:, None], y, C, family="binomial")
-    assert not res["converged"][0] and res["p"][0] > 0.5
+    with pytest.warns(UserWarning, match="infinite"):
+        res = glm_screen(y[:, None], y, C, family="binomial")
+    assert not res["converged"][0] and res["p"][0] > 0.5 and res["infinite"][0]
+
+
+@pytest.mark.parametrize("dtype", [torch.float64, torch.float32])
+def test_quasi_separation_is_flagged_infinite(dtype):
+    # Quasi-separation converges with a huge se, as in R; only the remaining Newton step shows it.
+    C, F, y = _simulate_glm("binomial")
+    quasi = ((y == 1) & (np.arange(len(y)) % 2 == 0)).astype(float)
+    with pytest.warns(UserWarning, match="1 screened models"):
+        res = glm_screen(np.column_stack([F[:, 0], quasi]), y, C, family="binomial", dtype=dtype)
+    assert res["infinite"].tolist() == [False, True] and res["converged"].all()
+
+
+def test_glm_fit_flags_infinite_term_only():
+    C, F, y = _simulate_glm("poisson")
+    zero_group = ((y == 0) & (np.arange(len(y)) % 2 == 0)).astype(float)
+    with pytest.warns(UserWarning, match="1 coefficients may be infinite"):
+        res = glm_fit(np.column_stack([C, zero_group]), y, family="poisson", device="cpu")
+    assert res["infinite"].tolist() == [False, False, False, True] and res.attrs["converged"]
+
+
+@pytest.mark.parametrize("family", ["gaussian", "binomial", "poisson"])
+def test_regular_screen_has_no_infinite_flags(family):
+    C, F, y = _simulate_glm(family)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = glm_screen(F, y, C, family=family)
+    assert not res["infinite"].any()
