@@ -61,3 +61,8 @@ def test_skipped_check_is_marked_in_report(tmp_path):
 def test_degenerate_features_check_passes(kind):
     row = run_checks.check_degenerate(kind, "cpu", n=300)
     assert row["pass_float64"] and row["pass_float32"]
+
+
+def test_poisson_offset_check_passes():
+    row = run_checks.check_screen_poisson_offset("cpu", 400, 5)
+    assert row["pass"] and row["beta_max_abs_err"] < 1e-6

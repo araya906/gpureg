@@ -23,6 +23,8 @@ res = cox_screen(proteins, time, event, covariates, ties="efron")
 
 # Single models with a full coefficient table (diagnostics in .attrs)
 tab = glm_fit(X, y, family="poisson")
+# Rates: offset enters the linear predictor with coefficient 1 (glm_screen too)
+tab = glm_fit(X, events, family="poisson", offset=np.log(person_years))
 tab = cox_fit(X, time, event)
 
 # Lasso / elastic net with 10-fold CV; folds are fitted together as one batch

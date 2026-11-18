@@ -92,6 +92,26 @@ def _fit_screen(kind, C, F, out, ties, device, dtype=torch.float64):
     return glm_screen(F, out, C, family=kind, device=device, dtype=dtype)
 
 
+def check_screen_poisson_offset(device, n, m, seed=4):
+    """Poisson rate screen with a log person-time offset vs statsmodels GLM(offset=...)."""
+    C, F, _ = simulate_screen("poisson", n, m, seed)
+    rng = np.random.default_rng(seed + 100)
+    offset = np.log(rng.uniform(0.5, 20.0, size=n))
+    eta = -2.0 + C @ np.array([0.3, -0.2, 0.1]) + 0.4 * np.nan_to_num(F[:, 0]) + offset
+    y = rng.poisson(np.exp(eta)).astype(float)
+    start = time.perf_counter()
+    res = glm_screen(F, y, C, family="poisson", device=device, offset=offset)
+    t_ours = time.perf_counter() - start
+    rows = []
+    for j in range(m):
+        keep = ~np.isnan(F[:, j])
+        X = sm.add_constant(np.column_stack([C[keep], F[keep, j]]))
+        fit = sm.GLM(y[keep], X, family=SM_FAMILIES["poisson"], offset=offset[keep]).fit()
+        rows.append((fit.params[-1], fit.bse[-1], fit.pvalues[-1]))
+    return {"check": "screen_poisson_offset", "n": n, "m": m, **compare_screen(res, np.array(rows)),
+            "time_gpureg_s": t_ours}
+
+
 def _screen_name(kind, ties):
     return f"screen_{kind}" + (f"_{ties}" if kind == "cox" else "")
 
@@ -284,6 +304,7 @@ def run_all(quick, device):
             checks.append(check_screen(kind, n, m, 1, device))
         for ties in ("efron", "breslow"):
             checks.append(check_screen("cox", n, m, 2, device, ties))
+    checks.append(check_screen_poisson_offset(device, *sizes[-1]))
     checks.append(check_screen_binomial_float32(device, *sizes[-1]))
     checks.append(check_screen_gaussian_float32_p(device, *sizes[-1]))
     for kind in ("gaussian", "binomial", "poisson", "cox"):

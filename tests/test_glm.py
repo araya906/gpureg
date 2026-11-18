@@ -109,3 +109,45 @@ def test_regular_screen_has_no_infinite_flags(family):
         warnings.simplefilter("error")
         res = glm_screen(F, y, C, family=family)
     assert not res["infinite"].any()
+
+
+def _simulate_rates(n=800, m=3, seed=5):
+    rng = np.random.default_rng(seed)
+    C, F = rng.normal(size=(n, 2)), rng.normal(size=(n, m))
+    offset = np.log(rng.uniform(0.5, 20.0, size=n))  # log person-time
+    y = rng.poisson(np.exp(-2.0 + 0.3 * C[:, 0] + 0.4 * F[:, 0] + offset)).astype(float)
+    return C, F, y, offset
+
+
+def test_poisson_offset_matches_statsmodels():
+    C, F, y, offset = _simulate_rates()
+    F[::9, 2] = np.nan  # offset must follow the rows kept for each feature
+    res = glm_screen(F, y, C, family="poisson", device="cpu", offset=offset)
+    for j in range(F.shape[1]):
+        keep = ~np.isnan(F[:, j])
+        X = sm.add_constant(np.column_stack([C[keep], F[keep, j]]))
+        ref = sm.GLM(y[keep], X, family=SM_FAMILIES["poisson"], offset=offset[keep]).fit()
+        assert res["beta"][j] == pytest.approx(ref.params[-1], abs=1e-6)
+        assert res["se"][j] == pytest.approx(ref.bse[-1], rel=1e-5)
+        assert res["converged"][j]
+
+
+@pytest.mark.parametrize("family", list(SM_FAMILIES))
+def test_glm_fit_offset_matches_statsmodels(family):
+    C, F, y, offset = _simulate_rates()
+    if family != "poisson":
+        C, F, y = _simulate_glm(family, n=800)
+        offset = 0.2 * C[:, 1]
+    X = np.column_stack([C, F])
+    res = glm_fit(X, y, family=family, device="cpu", offset=offset)
+    ref = sm.GLM(y, sm.add_constant(X), family=SM_FAMILIES[family], offset=offset).fit()
+    np.testing.assert_allclose(res["beta"], ref.params, atol=1e-6)
+    np.testing.assert_allclose(res["se"], ref.bse, rtol=1e-5)
+
+
+def test_offset_is_validated():
+    C, F, y, offset = _simulate_rates(n=50)
+    with pytest.raises(ValueError, match="rows"):
+        glm_screen(F, y, C, family="poisson", offset=offset[:-1])
+    with pytest.raises(ValueError, match="finite"):
+        glm_fit(F, y, family="poisson", offset=np.full(50, -np.inf))
