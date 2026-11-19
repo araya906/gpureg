@@ -66,3 +66,9 @@ def test_degenerate_features_check_passes(kind):
 def test_poisson_offset_check_passes():
     row = run_checks.check_screen_poisson_offset("cpu", 400, 5)
     assert row["pass"] and row["beta_max_abs_err"] < 1e-6
+
+
+@pytest.mark.parametrize("ties", ["efron", "breslow"])
+def test_cox_strata_check_passes(ties):
+    row = run_checks.check_screen_cox_strata("cpu", 400, 5, ties)
+    assert row["pass"] and row["beta_max_abs_err"] < 1e-6

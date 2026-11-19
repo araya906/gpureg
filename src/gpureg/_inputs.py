@@ -43,3 +43,15 @@ def covariate_matrix(covariates, n):
     arr, _ = as_matrix(covariates, "cov")
     require_complete(arr, "covariates", n)
     return arr
+
+
+def strata_codes(strata, n):
+    """Integer codes (length n) for stratum labels; None means a single stratum."""
+    if strata is None:
+        return np.zeros(n, dtype=np.int64)
+    codes, _ = pd.factorize(pd.Series(np.asarray(strata).ravel()))
+    if len(codes) != n:
+        raise ValueError(f"strata has {len(codes)} rows, expected {n}.")
+    if (codes < 0).any():
+        raise ValueError("strata contains missing values; remove those rows first.")
+    return codes

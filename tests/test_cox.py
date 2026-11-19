@@ -71,3 +71,54 @@ def test_cox_fit_regular_data_has_no_infinite_terms():
     C, F, time, event = _simulate_cox()
     res = cox_fit(np.column_stack([C, F]), time, event, device="cpu")
     assert not res["infinite"].any()
+
+
+def _strata(n, seed=1):
+    return np.random.default_rng(seed).integers(0, 4, n)
+
+
+@pytest.mark.parametrize("ties", ["efron", "breslow"])
+def test_stratified_screen_and_fit_match_statsmodels(ties):
+    C, F, time, event = _simulate_cox()
+    s = _strata(len(time))
+    F[::7, 1] = np.nan
+    res = cox_screen(F, time, event, C, ties=ties, strata=s, device="cpu", chunk_size=2)
+    for j in range(F.shape[1]):
+        keep = ~np.isnan(F[:, j])
+        X = np.column_stack([C[keep], F[keep, j]])
+        ref = sm.PHReg(time[keep], X, status=event[keep], ties=ties, strata=s[keep]).fit()
+        assert res["beta"][j] == pytest.approx(ref.params[-1], abs=1e-6)
+        assert res["se"][j] == pytest.approx(ref.bse[-1], rel=1e-5)
+    X = np.column_stack([C, F[:, [0, 2]]])
+    tab = cox_fit(X, time, event, ties=ties, strata=s, device="cpu")
+    ref = sm.PHReg(time, X, status=event, ties=ties, strata=s).fit()
+    np.testing.assert_allclose(tab["beta"], ref.params, atol=1e-6)
+    np.testing.assert_allclose(tab["se"], ref.bse, rtol=1e-5)
+
+
+def test_single_stratum_equals_unstratified_and_labels_can_be_strings():
+    C, F, time, event = _simulate_cox()
+    plain = cox_screen(F, time, event, C, device="cpu")
+    one = cox_screen(F, time, event, C, strata=np.repeat("a", len(time)), device="cpu")
+    np.testing.assert_allclose(one["beta"], plain["beta"], rtol=1e-12)
+    labels = np.array(["x", "y", "z", "w"])[_strata(len(time))]
+    codes = cox_screen(F, time, event, C, strata=_strata(len(time)), device="cpu")
+    named = cox_screen(F, time, event, C, strata=labels, device="cpu")
+    np.testing.assert_allclose(named["beta"], codes["beta"], rtol=1e-12)
+
+
+def test_feature_constant_within_strata_is_singular():
+    C, F, time, event = _simulate_cox()
+    s = _strata(len(time))
+    res = cox_screen(np.column_stack([F[:, 0], s.astype(float)]), time, event, C, strata=s)
+    assert res["singular"].tolist() == [False, True] and np.isnan(res["se"][1])
+
+
+def test_bad_strata_are_rejected():
+    C, F, time, event = _simulate_cox()
+    s = _strata(len(time)).astype(float)
+    with pytest.raises(ValueError, match="rows"):
+        cox_screen(F, time, event, C, strata=s[:-1])
+    s[3] = np.nan
+    with pytest.raises(ValueError, match="missing"):
+        cox_fit(F, time, event, strata=s)

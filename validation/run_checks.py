@@ -112,6 +112,28 @@ def check_screen_poisson_offset(device, n, m, seed=4):
             "time_gpureg_s": t_ours}
 
 
+def check_screen_cox_strata(device, n, m, ties, seed=5):
+    """Stratified Cox screen (8 strata, different baseline hazards) vs statsmodels PHReg(strata=)."""
+    C, F, _ = simulate_screen("cox", n, m, seed)
+    rng = np.random.default_rng(seed + 100)
+    strata = rng.integers(0, 8, size=n)
+    eta = C @ np.array([0.4, -0.3, 0.2]) + 0.5 * np.nan_to_num(F[:, 0]) + 0.4 * strata - 1.5
+    t_event = np.ceil(rng.exponential(1 / np.exp(eta)) * 30)
+    t_cens = np.ceil(rng.exponential(2.0, size=n) * 30)
+    time_, event = np.minimum(t_event, t_cens), (t_event <= t_cens).astype(float)
+    start = time.perf_counter()
+    res = cox_screen(F, time_, event, C, ties=ties, device=device, strata=strata)
+    t_ours = time.perf_counter() - start
+    rows = []
+    for j in range(m):
+        keep = ~np.isnan(F[:, j])
+        X = np.column_stack([C[keep], F[keep, j]])
+        fit = sm.PHReg(time_[keep], X, status=event[keep], ties=ties, strata=strata[keep]).fit()
+        rows.append((fit.params[-1], fit.bse[-1], fit.pvalues[-1]))
+    return {"check": f"screen_cox_{ties}_strata", "n": n, "m": m,
+            **compare_screen(res, np.array(rows)), "time_gpureg_s": t_ours}
+
+
 def _screen_name(kind, ties):
     return f"screen_{kind}" + (f"_{ties}" if kind == "cox" else "")
 
@@ -305,6 +327,8 @@ def run_all(quick, device):
         for ties in ("efron", "breslow"):
             checks.append(check_screen("cox", n, m, 2, device, ties))
     checks.append(check_screen_poisson_offset(device, *sizes[-1]))
+    for ties in ("efron", "breslow"):
+        checks.append(check_screen_cox_strata(device, *sizes[-1], ties))
     checks.append(check_screen_binomial_float32(device, *sizes[-1]))
     checks.append(check_screen_gaussian_float32_p(device, *sizes[-1]))
     for kind in ("gaussian", "binomial", "poisson", "cox"):

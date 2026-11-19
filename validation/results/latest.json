@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-18T01:52:32+00:00",
+  "timestamp": "2026-11-19T01:56:50+00:00",
   "device": "cpu",
   "torch": "2.15.0+cu132",
   "python": "3.13.18",
@@ -15,8 +15,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.010193503999971654,
-      "time_reference_s": 0.02401590900001338
+      "time_gpureg_s": 0.005143459000009898,
+      "time_reference_s": 0.012185857000076794
     },
     {
       "check": "screen_binomial",
@@ -28,8 +28,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.005263002999981836,
-      "time_reference_s": 0.01753049900003134
+      "time_gpureg_s": 0.003538334000040777,
+      "time_reference_s": 0.015808981999953176
     },
     {
       "check": "screen_poisson",
@@ -41,8 +41,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.006122429000015472,
-      "time_reference_s": 0.02218228399999589
+      "time_gpureg_s": 0.0032830979998834664,
+      "time_reference_s": 0.015247241999986727
     },
     {
       "check": "screen_cox_efron",
@@ -54,8 +54,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.012873555000055603,
-      "time_reference_s": 0.3283936209999183
+      "time_gpureg_s": 0.0087102390000382,
+      "time_reference_s": 0.23800774500000443
     },
     {
       "check": "screen_cox_breslow",
@@ -67,8 +67,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.01311731900000268,
-      "time_reference_s": 0.20189895400005753
+      "time_gpureg_s": 0.008075207000047158,
+      "time_reference_s": 0.13833782699998665
     },
     {
       "check": "screen_gaussian",
@@ -80,8 +80,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.11680341699991459,
-      "time_reference_s": 0.5510741499999767
+      "time_gpureg_s": 0.03938907899987498,
+      "time_reference_s": 0.37761137400002553
     },
     {
       "check": "screen_binomial",
@@ -93,8 +93,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.11054213700003857,
-      "time_reference_s": 0.6494858800000429
+      "time_gpureg_s": 0.058219427000040014,
+      "time_reference_s": 0.49133983299998363
     },
     {
       "check": "screen_poisson",
@@ -106,8 +106,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.12093663500002094,
-      "time_reference_s": 0.7600975820000713
+      "time_gpureg_s": 0.054271878000008655,
+      "time_reference_s": 0.516876615000001
     },
     {
       "check": "screen_cox_efron",
@@ -119,8 +119,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.7479707699999381,
-      "time_reference_s": 8.969664406999982
+      "time_gpureg_s": 0.3306811200000084,
+      "time_reference_s": 6.627019748000066
     },
     {
       "check": "screen_cox_breslow",
@@ -132,8 +132,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.7177617649999775,
-      "time_reference_s": 4.983713286000011
+      "time_gpureg_s": 0.39152778100014984,
+      "time_reference_s": 4.004422803000125
     },
     {
       "check": "screen_poisson_offset",
@@ -145,7 +145,31 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.14102610099996582
+      "time_gpureg_s": 0.05699881600003209
+    },
+    {
+      "check": "screen_cox_efron_strata",
+      "n": 5000,
+      "m": 100,
+      "beta_max_abs_err": 1.402977733988564e-11,
+      "se_max_rel_err": 9.036016249083183e-13,
+      "log10p_max_abs_err": 7.795620149408933e-09,
+      "all_converged": true,
+      "n_infinite": 0,
+      "pass": true,
+      "time_gpureg_s": 1.0968621580000217
+    },
+    {
+      "check": "screen_cox_breslow_strata",
+      "n": 5000,
+      "m": 100,
+      "beta_max_abs_err": 9.977740855759976e-12,
+      "se_max_rel_err": 6.41064062840635e-13,
+      "log10p_max_abs_err": 5.406718628364615e-09,
+      "all_converged": true,
+      "n_infinite": 0,
+      "pass": true,
+      "time_gpureg_s": 1.0352108339998267
     },
     {
       "check": "screen_binomial_float32_vs_float64",
@@ -214,7 +238,7 @@
       "check": "lasso_binomial_vs_sklearn",
       "n": 1000,
       "m": 20,
-      "coef_max_abs_err": 3.194435826969766e-10,
+      "coef_max_abs_err": 3.416240623721478e-10,
       "pass": true
     },
     {

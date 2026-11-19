@@ -10,7 +10,7 @@
 - [x] Add a separation / constant-feature scenario and check that `singular` and `converged` flags are set sensibly.
 - [x] Flag infinite estimates explicitly (quasi-separation in GLM, monotone likelihood in Cox): today they report `converged=True` with huge SE and p near 1, as R does but without R's warning.
 - [x] GLM: support offsets (e.g. log person-time for poisson).
-- [ ] Cox: support strata.
+- [x] Cox: support strata (`cox_screen`/`cox_fit`).
 - [ ] Cox: support start-stop (left-truncated) data.
 - [ ] Lasso: strong-rule screening to skip inactive features along the path.
 - [ ] Optional sandwich (robust) standard errors for GLM and Cox.

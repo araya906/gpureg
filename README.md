@@ -26,6 +26,8 @@ tab = glm_fit(X, y, family="poisson")
 # Rates: offset enters the linear predictor with coefficient 1 (glm_screen too)
 tab = glm_fit(X, events, family="poisson", offset=np.log(person_years))
 tab = cox_fit(X, time, event)
+# Stratified Cox: one baseline hazard per stratum (cox_screen too)
+tab = cox_fit(X, time, event, strata=centre)
 
 # Lasso / elastic net with 10-fold CV; folds are fitted together as one batch
 fit = lasso_cv(proteins_and_covs, family="cox", time=time, event=event,
@@ -40,19 +42,19 @@ Inputs can be numpy arrays or pandas objects; DataFrame column names are kept.
 | Model | Algorithm | Matches |
 |---|---|---|
 | GLM (gaussian, binomial, poisson; canonical links) | Batched Newton with step halving | `glm()` / statsmodels `GLM` |
-| Cox (Efron default, Breslow) | Batched Newton with step halving | `coxph()` / statsmodels `PHReg` |
+| Cox (Efron default, Breslow; optional strata) | Batched Newton with step halving | `coxph()` / statsmodels `PHReg` |
 | Lasso / elastic net (gaussian, binomial, Cox-Breslow) | Batched FISTA with backtracking and restart | `glmnet` scaling, scikit-learn `Lasso` |
 
 - **Screening** builds a `(models, n, k)` design per chunk; chunk size is set from free GPU memory (`chunk_size=` overrides).
 - **Missing feature values** (NaN) are handled per model with zero weights, so each model uses its own complete rows. Outcome and covariates must be complete.
 - **Precision**: `float64` by default. Consumer GPUs run float64 much slower than float32; pass `dtype=torch.float32` for speed at the cost of accuracy in SEs and very small p-values.
-- **Diagnostics** per model: `converged`, `n_iter`, `singular` (information matrix rank-deficient, e.g. a constant or collinear feature; `se`, `z` and `p` are then NaN), `n_obs`, `infinite` (an estimate diverges: complete or quasi-separation in a GLM, monotone likelihood in Cox; detected as in R's `coxph` from the Newton step still left at the end, and reported with a warning; such fits have very large SEs with p near 1). `glm_fit`/`cox_fit` give `infinite` per term.
+- **Diagnostics** per model: `converged`, `n_iter`, `singular` (information matrix rank-deficient, e.g. a constant or collinear feature, or in Cox one constant within every stratum; `se`, `z` and `p` are then NaN), `n_obs`, `infinite` (an estimate diverges: complete or quasi-separation in a GLM, monotone likelihood in Cox; detected as in R's `coxph` from the Newton step still left at the end, and reported with a warning; such fits have very large SEs with p near 1). `glm_fit`/`cox_fit` give `infinite` per term.
 - **Lasso standardization** uses population SDs on the full data (also for CV folds); coefficients are returned on the original scale. CV error is held-out deviance per observation; Cox uses the Verweij–van Houwelingen cross-validated partial likelihood.
 
 ## Caveats
 
 - Lasso selects variables but its coefficients have no valid p-values, and refitting the selected set with `glm_fit`/`cox_fit` gives over-optimistic p-values. Use post-selection inference or sample splitting if you need tests.
-- Cox: right-censored data only (no strata, start-stop times or case weights).
+- Cox: right-censored data only (no start-stop times or case weights); `lasso_cv` has no strata.
 - GPU speed-up comes from batching many models or large `n`; a single small model is faster on CPU.
 
 ## Tests
