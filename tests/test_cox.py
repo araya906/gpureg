@@ -122,3 +122,60 @@ def test_bad_strata_are_rejected():
     s[3] = np.nan
     with pytest.raises(ValueError, match="missing"):
         cox_fit(F, time, event, strata=s)
+
+
+def _entry(time, seed=2):
+    """Non-integer delayed entry on 60% of rows (never equal to an integer event time)."""
+    rng = np.random.default_rng(seed)
+    return np.where(rng.random(len(time)) < 0.6, rng.uniform(0.0, 0.9, len(time)) * time, 0.0)
+
+
+@pytest.mark.parametrize("ties", ["efron", "breslow"])
+def test_entry_screen_and_fit_match_statsmodels(ties):
+    C, F, time, event = _simulate_cox()
+    entry, s = _entry(time), _strata(len(time))
+    F[::7, 1] = np.nan
+    res = cox_screen(F, time, event, C, ties=ties, strata=s, entry=entry, chunk_size=2)
+    for j in range(F.shape[1]):
+        keep = ~np.isnan(F[:, j])
+        X = np.column_stack([C[keep], F[keep, j]])
+        ref = sm.PHReg(time[keep], X, status=event[keep], ties=ties, strata=s[keep],
+                       entry=entry[keep]).fit()
+        assert res["beta"][j] == pytest.approx(ref.params[-1], abs=1e-6)
+        assert res["se"][j] == pytest.approx(ref.bse[-1], rel=1e-5)
+    X = np.column_stack([C, F[:, [0, 2]]])
+    tab = cox_fit(X, time, event, ties=ties, entry=entry)
+    ref = sm.PHReg(time, X, status=event, ties=ties, entry=entry).fit()
+    np.testing.assert_allclose(tab["beta"], ref.params, atol=1e-6)
+    np.testing.assert_allclose(tab["se"], ref.bse, rtol=1e-5)
+
+
+@pytest.mark.parametrize("ties", ["efron", "breslow"])
+def test_episode_splitting_leaves_the_fit_unchanged(ties):
+    """Counting-process rows (0, c], (c, time] for one subject: at risk on (start, stop], so the
+    split at a tied event time c must not count the subject twice (R survival convention)."""
+    C, F, time, event = _simulate_cox()
+    X = np.column_stack([C, F[:, 0]])
+    whole = cox_fit(X, time, event, ties=ties)
+    cut = np.floor(time / 2)
+    split = cut > 0
+    idx = np.r_[np.arange(len(time)), np.flatnonzero(split)]
+    entry = np.r_[np.where(split, cut, 0.0), np.zeros(split.sum())]
+    stop = np.r_[time, cut[split]]
+    ev = np.r_[event, np.zeros(split.sum())]
+    parts = cox_fit(X[idx], stop, ev, ties=ties, entry=entry)
+    np.testing.assert_allclose(parts["beta"], whole["beta"], rtol=1e-9)
+    np.testing.assert_allclose(parts["se"], whole["se"], rtol=1e-9)
+
+
+def test_zero_entry_equals_no_entry_and_bad_entry_is_rejected():
+    C, F, time, event = _simulate_cox()
+    plain = cox_screen(F, time, event, C)
+    zero = cox_screen(F, time, event, C, entry=np.zeros(len(time)))
+    np.testing.assert_allclose(zero["beta"], plain["beta"], rtol=1e-12)
+    with pytest.raises(ValueError, match="rows"):
+        cox_screen(F, time, event, C, entry=np.zeros(len(time) - 1))
+    with pytest.raises(ValueError, match="smaller than time"):
+        cox_fit(F, time, event, entry=time)
+    with pytest.raises(ValueError, match="missing"):
+        cox_fit(F, time, event, entry=np.r_[np.nan, np.zeros(len(time) - 1)])

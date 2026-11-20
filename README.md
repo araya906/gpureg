@@ -28,6 +28,8 @@ tab = glm_fit(X, events, family="poisson", offset=np.log(person_years))
 tab = cox_fit(X, time, event)
 # Stratified Cox: one baseline hazard per stratum (cox_screen too)
 tab = cox_fit(X, time, event, strata=centre)
+# Start-stop data (left truncation, time-varying covariates): at risk on (entry, time]
+tab = cox_fit(X, stop, event, entry=start)
 
 # Lasso / elastic net with 10-fold CV; folds are fitted together as one batch
 fit = lasso_cv(proteins_and_covs, family="cox", time=time, event=event,
@@ -42,7 +44,7 @@ Inputs can be numpy arrays or pandas objects; DataFrame column names are kept.
 | Model | Algorithm | Matches |
 |---|---|---|
 | GLM (gaussian, binomial, poisson; canonical links) | Batched Newton with step halving | `glm()` / statsmodels `GLM` |
-| Cox (Efron default, Breslow; optional strata) | Batched Newton with step halving | `coxph()` / statsmodels `PHReg` |
+| Cox (Efron default, Breslow; optional strata and start-stop times) | Batched Newton with step halving | `coxph()` / statsmodels `PHReg` |
 | Lasso / elastic net (gaussian, binomial, Cox-Breslow) | Batched FISTA with backtracking and restart | `glmnet` scaling, scikit-learn `Lasso` |
 
 - **Screening** builds a `(models, n, k)` design per chunk; chunk size is set from free GPU memory (`chunk_size=` overrides).
@@ -54,7 +56,7 @@ Inputs can be numpy arrays or pandas objects; DataFrame column names are kept.
 ## Caveats
 
 - Lasso selects variables but its coefficients have no valid p-values, and refitting the selected set with `glm_fit`/`cox_fit` gives over-optimistic p-values. Use post-selection inference or sample splitting if you need tests.
-- Cox: right-censored data only (no start-stop times or case weights); `lasso_cv` has no strata.
+- Cox: no case weights; `lasso_cv` has no strata or entry times. With `entry=`, a row is at risk on `(entry, time]` as in R's `survival`; statsmodels `PHReg(entry=)` also counts it at its entry time, so results differ when an entry time equals an event time.
 - GPU speed-up comes from batching many models or large `n`; a single small model is faster on CPU.
 
 ## Tests

@@ -134,6 +134,30 @@ def check_screen_cox_strata(device, n, m, ties, seed=5):
             **compare_screen(res, np.array(rows)), "time_gpureg_s": t_ours}
 
 
+def check_screen_cox_entry(device, n, m, ties, seed=6):
+    """Left-truncated Cox screen (entry < time, 4 strata) vs statsmodels PHReg(entry=, strata=).
+
+    Entry times are non-integer so none equals an event time: statsmodels counts a row as at risk
+    at its entry time, gpureg (like R's survival) does not; elsewhere both use entry < t <= time.
+    """
+    C, F, (time_, event) = simulate_screen("cox", n, m, seed)
+    rng = np.random.default_rng(seed + 100)
+    entry = np.where(rng.random(n) < 0.6, rng.uniform(0.0, 0.9, n) * time_, 0.0)
+    strata = rng.integers(0, 4, size=n)
+    start = time.perf_counter()
+    res = cox_screen(F, time_, event, C, ties=ties, device=device, strata=strata, entry=entry)
+    t_ours = time.perf_counter() - start
+    rows = []
+    for j in range(m):
+        keep = ~np.isnan(F[:, j])
+        X = np.column_stack([C[keep], F[keep, j]])
+        fit = sm.PHReg(time_[keep], X, status=event[keep], ties=ties, strata=strata[keep],
+                       entry=entry[keep]).fit()
+        rows.append((fit.params[-1], fit.bse[-1], fit.pvalues[-1]))
+    return {"check": f"screen_cox_{ties}_entry", "n": n, "m": m,
+            **compare_screen(res, np.array(rows)), "time_gpureg_s": t_ours}
+
+
 def _screen_name(kind, ties):
     return f"screen_{kind}" + (f"_{ties}" if kind == "cox" else "")
 
@@ -329,6 +353,7 @@ def run_all(quick, device):
     checks.append(check_screen_poisson_offset(device, *sizes[-1]))
     for ties in ("efron", "breslow"):
         checks.append(check_screen_cox_strata(device, *sizes[-1], ties))
+        checks.append(check_screen_cox_entry(device, *sizes[-1], ties))
     checks.append(check_screen_binomial_float32(device, *sizes[-1]))
     checks.append(check_screen_gaussian_float32_p(device, *sizes[-1]))
     for kind in ("gaussian", "binomial", "poisson", "cox"):

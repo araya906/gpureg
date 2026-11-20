@@ -17,7 +17,19 @@ def _check_ties(ties):
         raise ValueError(f"ties must be 'efron' or 'breslow', got {ties!r}.")
 
 
-def _cox_setup(time, event, strata, device, dtype):
+def _entry_times(entry, tv):
+    """Validated entry times (None for right-censored data): entry < time on every row."""
+    if entry is None:
+        return None
+    en = as_vector(entry, "entry")
+    if len(en) != len(tv):
+        raise ValueError(f"entry has {len(en)} rows, expected {len(tv)}.")
+    if not (en < tv).all():
+        raise ValueError("entry must be smaller than time on every row.")
+    return en
+
+
+def _cox_setup(time, event, strata, entry, device, dtype):
     """Validate the outcome; return (stratum, descending time) order, sorted events, risk sets."""
     tv, ev = as_vector(time, "time"), as_vector(event, "event")
     if len(tv) != len(ev):
@@ -25,8 +37,10 @@ def _cox_setup(time, event, strata, device, dtype):
     if not np.isin(ev, (0.0, 1.0)).all():
         raise ValueError("event must be coded 0/1.")
     codes = strata_codes(strata, len(tv))
+    en = _entry_times(entry, tv)
     order = np.lexsort((-tv, codes))
-    rs = build_risk_sets(tv[order], ev[order], device, codes[order])
+    rs = build_risk_sets(tv[order], ev[order], device, codes[order],
+                         None if en is None else en[order])
     return order, torch.as_tensor(ev[order], device=device, dtype=dtype), rs
 
 
@@ -48,7 +62,7 @@ def _cox_information(r, X, event, rs, valid, frac, den, a):
     e_all = r.new_zeros(r.shape[0], n_groups)
     h_all[:, rs.event_groups] = (valid / den).sum(2)
     e_all[:, rs.event_groups] = (valid * frac / den).sum(2)
-    c = later_group_sum(h_all, rs)[:, rs.gid] - event * e_all[:, rs.gid]
+    c = later_group_sum(h_all, rs) - event * e_all[:, rs.gid]
     first = (X * (r * c).unsqueeze(-1)).transpose(1, 2) @ X
     flat = a.reshape(a.shape[0], -1, a.shape[-1])
     return first - flat.transpose(1, 2) @ flat
@@ -100,16 +114,19 @@ def _fit_cox_batch(X, event, w, rs, efron, max_iter, tol):
 
 
 def cox_screen(features, time, event, covariates=None, ties="efron", device=None,
-               dtype=torch.float64, chunk_size=None, max_iter=30, tol=None, strata=None):
-    """Fit Surv(time, event) ~ covariates + feature_j [+ strata(s)] for every feature column j.
+               dtype=torch.float64, chunk_size=None, max_iter=30, tol=None, strata=None,
+               entry=None):
+    """Fit Surv([entry,] time, event) ~ covariates + feature_j [+ strata(s)] for every feature j.
 
     Rows where feature j is missing (NaN) are dropped for that model only. `strata` (length-n
-    labels) gives each stratum its own baseline hazard: risk sets never cross strata.
+    labels) gives each stratum its own baseline hazard: risk sets never cross strata. `entry`
+    (length-n, < time) gives start-stop data: a row is at risk at t when entry < t <= time
+    (left truncation, or counting-process rows for time-varying covariates).
     """
     _check_ties(ties)
     dev = resolve_device(device)
     check_dtype(dev, dtype)
-    order, ev, rs = _cox_setup(time, event, strata, dev, dtype)
+    order, ev, rs = _cox_setup(time, event, strata, entry, dev, dtype)
     Fa, names = as_matrix(features, "feature")
     check_rows(Fa, "features", len(order))
     Ca = covariate_matrix(covariates, len(order))
@@ -123,15 +140,16 @@ def cox_screen(features, time, event, covariates=None, ties="efron", device=None
 
 
 def cox_fit(X, time, event, ties="efron", device=None, dtype=torch.float64,
-            max_iter=30, tol=None, strata=None):
+            max_iter=30, tol=None, strata=None, entry=None):
     """Fit a single Cox model and return its coefficient table (diagnostics in .attrs).
 
-    `strata` (length-n labels) gives each stratum its own baseline hazard.
+    `strata` (length-n labels) gives each stratum its own baseline hazard; `entry` (length-n,
+    < time) gives start-stop data, at risk on (entry, time].
     """
     _check_ties(ties)
     dev = resolve_device(device)
     check_dtype(dev, dtype)
-    order, ev, rs = _cox_setup(time, event, strata, dev, dtype)
+    order, ev, rs = _cox_setup(time, event, strata, entry, dev, dtype)
     Xa, names = as_matrix(X, "x")
     require_complete(Xa, "X", len(order))
     Xt = torch.as_tensor(Xa[order], device=dev, dtype=dtype).unsqueeze(0)

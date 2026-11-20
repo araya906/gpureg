@@ -11,7 +11,7 @@
 - [x] Flag infinite estimates explicitly (quasi-separation in GLM, monotone likelihood in Cox): today they report `converged=True` with huge SE and p near 1, as R does but without R's warning.
 - [x] GLM: support offsets (e.g. log person-time for poisson).
 - [x] Cox: support strata (`cox_screen`/`cox_fit`).
-- [ ] Cox: support start-stop (left-truncated) data.
+- [x] Cox: support start-stop (left-truncated) data.
 - [ ] Lasso: strong-rule screening to skip inactive features along the path.
 - [ ] Optional sandwich (robust) standard errors for GLM and Cox.
 - [ ] Benchmark the automatic chunk-size heuristic on larger simulated data (CPU) and document results.
