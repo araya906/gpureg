@@ -32,7 +32,7 @@ _SK_L1 = ({"l1_ratio": 1.0} if tuple(int(v) for v in sklearn.__version__.split("
           else {"penalty": "l1"})
 TOL = {"beta_abs": 1e-5, "se_rel": 1e-4, "log10p_abs": 1e-3, "lasso_gauss_abs": 1e-5,
        "lasso_binom_abs": 1e-3, "lasso_cox_abs": 1e-4, "lasso_f32_abs": 1e-4, "screen_f32_beta_abs": 1e-4,
-       "screen_f32_log10p_rel": 1e-4}
+       "screen_f32_log10p_rel": 1e-4, "lasso_strong_abs": 1e-8}
 SM_FAMILIES = {"gaussian": sm.families.Gaussian(), "binomial": sm.families.Binomial(),
                "poisson": sm.families.Poisson()}
 
@@ -246,6 +246,20 @@ def check_lasso_cox(device, n=1000, p=30):
     return {**row, "coef_max_abs_err": err, "pass": err <= TOL["lasso_cox_abs"]}
 
 
+def check_lasso_strong_rules(device, n=1000, p=200):
+    """Binomial CV path with and without strong-rule screening: same coefficients and CV curve."""
+    X = _standardized(n, p, 18)
+    eta = X[:, :5] @ np.array([1.0, -0.8, 0.6, 0.5, -0.4])
+    y = np.random.default_rng(19).binomial(1, 1 / (1 + np.exp(-eta))).astype(float)
+    fits = [lasso_cv(X, y, family="binomial", n_folds=5, n_lambda=30, device=device,
+                     unpenalized=[p - 1], strong_rules=sr) for sr in (True, False)]
+    err = max(float(np.abs(fits[0].coef - fits[1].coef).max()),
+              float(np.abs(fits[0].cv_mean - fits[1].cv_mean).max()))
+    return {"check": "lasso_strong_rules_vs_full", "n": n, "m": p, "max_abs_err": err,
+            "mean_cols_fitted": float(fits[0].n_fitted.mean()),
+            "pass": err <= TOL["lasso_strong_abs"]}
+
+
 def float32_screen(kind, n, m, seed, device, ties="efron"):
     """Same data fitted in float32 and float64: max discrepancies, no pass/fail."""
     C, F, out = simulate_screen(kind, n, m, seed)
@@ -359,7 +373,7 @@ def run_all(quick, device):
     for kind in ("gaussian", "binomial", "poisson", "cox"):
         checks.append(check_degenerate(kind, device))
     for fn in (check_lasso_gaussian, check_lasso_gaussian_float32, check_lasso_binomial,
-               check_lasso_cox, check_lasso_cox_recovery):
+               check_lasso_cox, check_lasso_cox_recovery, check_lasso_strong_rules):
         checks.append(fn(device))
     return checks
 

@@ -1,4 +1,4 @@
-# Validation 2026-11-20T01:44:14+00:00 (cpu)
+# Validation 2026-11-21T02:03:57+00:00 (cpu)
 
 | check | n | m | pass |
 |---|---|---|---|
@@ -28,6 +28,7 @@
 | lasso_binomial_vs_sklearn | 1000 | 20 | yes |
 | lasso_cox_vs_sksurv | 1000 | 30 | yes |
 | lasso_cox_signal_recovery | 2000 | 50 | yes |
+| lasso_strong_rules_vs_full | 1000 | 200 | yes |
 
 ## float32 vs float64 (informational, not gated)
 

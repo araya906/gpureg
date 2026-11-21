@@ -72,3 +72,8 @@ def test_poisson_offset_check_passes():
 def test_cox_strata_check_passes(ties):
     row = run_checks.check_screen_cox_strata("cpu", 400, 5, ties)
     assert row["pass"] and row["beta_max_abs_err"] < 1e-6
+
+
+def test_lasso_strong_rules_check_passes():
+    row = run_checks.check_lasso_strong_rules("cpu", n=300, p=40)
+    assert row["pass"] and row["mean_cols_fitted"] < 40

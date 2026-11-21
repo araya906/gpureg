@@ -46,6 +46,7 @@ class LassoResult:
     cv_se: Optional[np.ndarray]
     penalized: np.ndarray             # (p,) bool
     family: str
+    n_fitted: Optional[np.ndarray] = None  # (n_lambda,) columns fitted per lambda (strong rules)
 
     def _require_cv(self):
         if self.cv_mean is None:
@@ -164,13 +165,17 @@ def _lasso_loglik(family, eta, y, w, rs):
     return _lasso_breslow(eta, y, w, rs)
 
 
-def _lasso_objective(prob, w):
-    """obj(beta) -> (-loglik / n_w, gradient) for a (b, k) batch of coefficients."""
+def _lasso_objective(prob, w, cols=None):
+    """obj(beta) -> (-loglik / n_w, gradient) for a (b, k) batch of coefficients.
+
+    cols (bool mask) restricts the design to a column subset; beta then has cols.sum() columns.
+    """
     n_w = w.sum(1)
+    X = prob.X if cols is None else prob.X[:, cols]
 
     def obj(beta, grad=True):
-        ll, resid = _lasso_loglik(prob.family, beta @ prob.X.T, prob.y, w, prob.rs)
-        g = -(resid @ prob.X) / n_w[:, None] if grad else None
+        ll, resid = _lasso_loglik(prob.family, beta @ X.T, prob.y, w, prob.rs)
+        g = -(resid @ X) / n_w[:, None] if grad else None
         return -ll / n_w, g
     return obj
 
@@ -259,18 +264,55 @@ def _lasso_cv_deviance(prob, beta):
     return -2 * ll / n_held
 
 
-def _lasso_run(prob, obj, lambdas, beta, L, alpha, max_iter, tol):
-    coefs, devs, iters = [], [], []
+def _strong_set(prob, beta, g, lam, lam_prev, alpha):
+    """Columns kept by the sequential strong rule (Tibshirani et al. 2012), union over models.
+
+    A penalized column is dropped when |gradient| < alpha * pf * (2 lambda - lambda_prev) at the
+    previous solution in every model; unpenalized and non-zero columns are always kept.
+    """
+    thr = alpha * prob.pf * (2 * lam - lam_prev)
+    return (prob.pf == 0) | (beta != 0).any(0) | (g.abs() >= thr).any(0)
+
+
+def _fista_screened(prob, obj, beta, g, lam, lam_prev, alpha, L, max_iter, tol):
+    """Fit one lambda on the strong set; add KKT violators (|g| > alpha*pf*lambda) and refit."""
+    keep = _strong_set(prob, beta, g, lam, lam_prev, alpha)
+    lam_t, its = beta.new_tensor(lam), 0
+    while True:
+        sub_obj = _lasso_objective(prob, prob.W, keep)
+        sub, L, it = _fista(sub_obj, beta[:, keep], lam_t, prob.pf[keep], alpha, L, max_iter, tol)
+        its = max(its, it)
+        beta = torch.zeros_like(beta)
+        beta[:, keep] = sub
+        _, g = obj(beta)
+        viol = ~keep & (g.abs() > alpha * prob.pf * lam).any(0)
+        if not bool(viol.any()):
+            return beta, g, L, its, int(keep.sum())
+        keep = keep | viol
+
+
+def _lasso_run(prob, obj, lambdas, beta, L, alpha, max_iter, tol, strong_rules):
+    coefs, devs, iters, n_cols = [], [], [], []
+    _, g = obj(beta)
+    lam_prev = float(lambdas[0])
     for lam in lambdas:
-        beta, L, it = _fista(obj, beta, beta.new_tensor(float(lam)), prob.pf, alpha, L, max_iter, tol)
+        lam = float(lam)
+        if strong_rules:
+            beta, g, L, it, k = _fista_screened(prob, obj, beta, g, lam, lam_prev, alpha, L,
+                                                max_iter, tol)
+        else:
+            beta, L, it = _fista(obj, beta, beta.new_tensor(lam), prob.pf, alpha, L, max_iter, tol)
+            k = beta.shape[1]
+        lam_prev = lam
         coefs.append(beta[0].clone())
         iters.append(it)
+        n_cols.append(k)
         if prob.W.shape[0] > 1:
             devs.append(_lasso_cv_deviance(prob, beta))
-    return torch.stack(coefs), (torch.stack(devs) if devs else None), iters
+    return torch.stack(coefs), (torch.stack(devs) if devs else None), iters, np.array(n_cols)
 
 
-def _lasso_result(prob, lambdas, coefs, devs):
+def _lasso_result(prob, lambdas, coefs, devs, n_cols):
     beta = coefs / prob.scale
     if prob.intercept:
         beta[:, 0] -= (beta[:, 1:] * prob.mean[1:]).sum(1)
@@ -282,19 +324,21 @@ def _lasso_result(prob, lambdas, coefs, devs):
         cv_mean, cv_se = d.mean(1), d.std(1, ddof=1) / math.sqrt(d.shape[1])
     if prob.intercept:
         return LassoResult(prob.names, lambdas, beta[:, 1:], beta[:, 0], cv_mean, cv_se,
-                           pf[1:] > 0, prob.family)
-    return LassoResult(prob.names, lambdas, beta, None, cv_mean, cv_se, pf > 0, prob.family)
+                           pf[1:] > 0, prob.family, n_cols - 1)
+    return LassoResult(prob.names, lambdas, beta, None, cv_mean, cv_se, pf > 0, prob.family, n_cols)
 
 
 def lasso_cv(X, y=None, *, family="gaussian", time=None, event=None, unpenalized=None,
              alpha=1.0, n_lambda=100, lambda_min_ratio=None, n_folds=10, seed=0,
-             device=None, dtype=torch.float64, max_iter=5000, tol=1e-7):
+             device=None, dtype=torch.float64, max_iter=5000, tol=1e-7, strong_rules=True):
     """Lasso (alpha=1) or elastic-net path with K-fold CV; all folds fitted as one batch.
 
     family: 'gaussian' or 'binomial' (pass y), or 'cox' (pass time and event; Breslow ties).
     unpenalized: column names or indices kept in every model (e.g. confounders).
     n_folds=0 fits the path on the full data only.
     tol (max coefficient change) is raised to the dtype's rounding floor (float32: ~1e-6).
+    strong_rules: fit each lambda on the sequential strong set only, then check the KKT
+    conditions on the dropped columns and refit with any violators (same solution, less work).
     """
     dev = resolve_device(device)
     check_dtype(dev, dtype)
@@ -303,7 +347,8 @@ def lasso_cv(X, y=None, *, family="gaussian", time=None, event=None, unpenalized
     obj = _lasso_objective(prob, prob.W)
     L = torch.full((prob.W.shape[0],), _lasso_lipschitz(prob), device=dev, dtype=dtype)
     lambdas, beta, L = _lasso_lambdas(prob, obj, alpha, n_lambda, lambda_min_ratio, L, max_iter, tol)
-    coefs, devs, iters = _lasso_run(prob, obj, lambdas, beta, L, alpha, max_iter, tol)
+    coefs, devs, iters, n_cols = _lasso_run(prob, obj, lambdas, beta, L, alpha, max_iter, tol,
+                                            strong_rules)
     if max(iters) >= max_iter:
         warnings.warn("FISTA reached max_iter for some lambdas; increase max_iter or tol.")
-    return _lasso_result(prob, lambdas, coefs, devs)
+    return _lasso_result(prob, lambdas, coefs, devs, n_cols)

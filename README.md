@@ -52,6 +52,7 @@ Inputs can be numpy arrays or pandas objects; DataFrame column names are kept.
 - **Precision**: `float64` by default. Consumer GPUs run float64 much slower than float32; pass `dtype=torch.float32` for speed at the cost of accuracy in SEs and very small p-values.
 - **Diagnostics** per model: `converged`, `n_iter`, `singular` (information matrix rank-deficient, e.g. a constant or collinear feature, or in Cox one constant within every stratum; `se`, `z` and `p` are then NaN), `n_obs`, `infinite` (an estimate diverges: complete or quasi-separation in a GLM, monotone likelihood in Cox; detected as in R's `coxph` from the Newton step still left at the end, and reported with a warning; such fits have very large SEs with p near 1). `glm_fit`/`cox_fit` give `infinite` per term.
 - **Lasso standardization** uses population SDs on the full data (also for CV folds); coefficients are returned on the original scale. CV error is held-out deviance per observation; Cox uses the Verweij–van Houwelingen cross-validated partial likelihood.
+- **Lasso strong rules** (`strong_rules=True`, default): each lambda is fitted only on the sequential strong set (union over CV folds), then the KKT conditions are checked on the dropped columns and violators are added and refitted, so the path is unchanged. `fit.n_fitted` gives the columns fitted per lambda. The saving is largest early in the path and when few features enter; in CPU trials (5 folds, p up to 3000) it saved 0-23% of the time.
 
 ## Caveats
 

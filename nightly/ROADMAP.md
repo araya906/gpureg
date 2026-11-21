@@ -12,6 +12,6 @@
 - [x] GLM: support offsets (e.g. log person-time for poisson).
 - [x] Cox: support strata (`cox_screen`/`cox_fit`).
 - [x] Cox: support start-stop (left-truncated) data.
-- [ ] Lasso: strong-rule screening to skip inactive features along the path.
+- [x] Lasso: strong-rule screening to skip inactive features along the path.
 - [ ] Optional sandwich (robust) standard errors for GLM and Cox.
 - [ ] Benchmark the automatic chunk-size heuristic on larger simulated data (CPU) and document results.

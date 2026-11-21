@@ -60,3 +60,32 @@ def test_float32_tol_floored_at_rounding_error():
         warnings.simplefilter("error")
         lasso_cv(X, y, family="gaussian", n_folds=0, n_lambda=10, device="cpu",
                  dtype=torch.float32, tol=1e-10, max_iter=2000)
+
+
+@pytest.mark.parametrize("family", ["gaussian", "cox"])
+def test_strong_rules_give_same_path(family):
+    X = _standardized(400, 60, 8)
+    rng = np.random.default_rng(9)
+    eta = X[:, :3] @ np.array([0.9, -0.7, 0.6])
+    if family == "gaussian":
+        kw = {"y": eta + rng.normal(size=400)}
+    else:
+        t_event, t_cens = rng.exponential(1 / np.exp(eta)), rng.exponential(2.0, size=400)
+        kw = {"time": np.minimum(t_event, t_cens), "event": (t_event <= t_cens).astype(float)}
+    fits = [lasso_cv(X, family=family, n_folds=3, n_lambda=20, device="cpu", unpenalized=["x59"],
+                     strong_rules=sr, **kw) for sr in (True, False)]
+    np.testing.assert_allclose(fits[0].coef, fits[1].coef, atol=1e-10)
+    np.testing.assert_allclose(fits[0].cv_mean, fits[1].cv_mean, atol=1e-10)
+    assert fits[0].n_fitted[0] < 60 and fits[0].n_fitted.max() <= 60
+
+
+def test_strong_rules_kkt_check_recovers_dropped_features(monkeypatch):
+    # A strong set holding only the unpenalized column forces the KKT check to add the signals.
+    from gpureg import lasso as lasso_mod
+    monkeypatch.setattr(lasso_mod, "_strong_set", lambda prob, *a: prob.pf == 0)
+    X = _standardized(300, 20, 10)
+    y = X[:, :3] @ np.array([1.0, -0.8, 0.5]) + np.random.default_rng(11).normal(size=300)
+    fits = [lasso_cv(X, y, family="gaussian", n_folds=0, n_lambda=10, device="cpu",
+                     strong_rules=sr) for sr in (True, False)]
+    np.testing.assert_allclose(fits[0].coef, fits[1].coef, atol=1e-6)  # refits restart FISTA; tol 1e-7
+    assert fits[0].n_fitted[-1] > 3
