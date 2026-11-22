@@ -151,3 +151,52 @@ def test_offset_is_validated():
         glm_screen(F, y, C, family="poisson", offset=offset[:-1])
     with pytest.raises(ValueError, match="finite"):
         glm_fit(F, y, family="poisson", offset=np.full(50, -np.inf))
+
+
+def _simulate_misspecified(family, n=800, m=3, seed=8):
+    """Heteroskedastic gaussian / overdispersed binomial-by-cluster / negative binomial counts."""
+    rng = np.random.default_rng(seed)
+    C, F = rng.normal(size=(n, 2)), rng.normal(size=(n, m))
+    eta = 0.2 + 0.4 * C[:, 0] - 0.3 * F[:, 0]
+    if family == "gaussian":
+        y = eta + rng.normal(size=n) * (0.5 + np.abs(F[:, 0]))
+    elif family == "binomial":
+        y = rng.binomial(1, 1 / (1 + np.exp(-eta - rng.normal(size=n)))).astype(float)
+    else:
+        y = rng.negative_binomial(2, 2 / (2 + np.exp(eta))).astype(float)
+    return C, F, y
+
+
+@pytest.mark.parametrize("family", list(SM_FAMILIES))
+def test_robust_screen_matches_statsmodels_hc0(family):
+    C, F, y = _simulate_misspecified(family)
+    F[::7, 1] = np.nan  # sandwich must use only the rows kept for each feature
+    res = glm_screen(F, y, C, family=family, device="cpu", robust=True)
+    for j in range(F.shape[1]):
+        keep = ~np.isnan(F[:, j])
+        X = sm.add_constant(np.column_stack([C[keep], F[keep, j]]))
+        ref = sm.GLM(y[keep], X, family=SM_FAMILIES[family]).fit(cov_type="HC0")
+        assert res["beta"][j] == pytest.approx(ref.params[-1], abs=1e-8)
+        assert res["se"][j] == pytest.approx(ref.bse[-1], rel=1e-6)
+        assert res["p"][j] == pytest.approx(ref.pvalues[-1], rel=1e-5, abs=1e-12)
+
+
+@pytest.mark.parametrize("family", list(SM_FAMILIES))
+def test_robust_glm_fit_with_offset_matches_statsmodels_hc0(family):
+    C, F, y = _simulate_misspecified(family)
+    X, offset = np.column_stack([C, F]), 0.3 * C[:, 1]
+    res = glm_fit(X, y, family=family, device="cpu", offset=offset, robust=True)
+    ref = sm.GLM(y, sm.add_constant(X), family=SM_FAMILIES[family],
+                 offset=offset).fit(cov_type="HC0")
+    np.testing.assert_allclose(res["beta"], ref.params, atol=1e-8)
+    np.testing.assert_allclose(res["se"], ref.bse, rtol=1e-6)
+
+
+def test_robust_keeps_estimates_and_singular_se_nan():
+    C, F, y = _simulate_glm("poisson")
+    F[:, 1] = 1.0  # constant feature: collinear with the intercept
+    plain = glm_screen(F, y, C, family="poisson", device="cpu")
+    rob = glm_screen(F, y, C, family="poisson", device="cpu", robust=True)
+    np.testing.assert_array_equal(rob["beta"], plain["beta"])
+    assert rob["singular"][1] and np.isnan(rob["se"][1])
+    assert np.isfinite(rob["se"][[0, 2, 3]]).all()

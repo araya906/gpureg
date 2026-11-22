@@ -53,13 +53,28 @@ def _glm_dispersion(family, X, y, w, beta, offset, n_obs):
     return (w * resid ** 2).sum(1) / (n_obs - X.shape[2]).clamp(min=1)
 
 
-def _fit_glm_batch(X, y, w, family, max_iter, tol, offset):
+def _glm_sandwich(family, X, y, w, beta, offset, cov):
+    """HC0 robust covariance cov @ (sum_i w_i r_i^2 x_i x_i') @ cov, r = y - mu.
+
+    Valid without the variance-function assumption; no dispersion or small-sample factor
+    (as statsmodels GLM cov_type="HC0" and R sandwich::vcovHC(type="HC0")).
+    """
+    mu = _glm_terms(family, torch.einsum("bnk,bk->bn", X, beta) + offset, y)[0]
+    meat = (X * (w * (y - mu) ** 2).unsqueeze(-1)).transpose(1, 2) @ X
+    return cov @ meat @ cov
+
+
+def _fit_glm_batch(X, y, w, family, max_iter, tol, offset, robust=False):
     fun = _glm_objective(X, y, w, family, offset)
     beta0 = X.new_zeros(X.shape[0], X.shape[2])
     beta, ll, info, conv, n_iter, infinite = newton_maximize(fun, beta0, max_iter, tol)
     cov, singular = spd_inverse(info)
     n_obs = w.sum(1)
-    phi = _glm_dispersion(family, X, y, w, beta, offset, n_obs)
+    if robust:
+        phi = torch.ones_like(n_obs)
+        cov = _glm_sandwich(family, X, y, w, beta, offset, cov)
+    else:
+        phi = _glm_dispersion(family, X, y, w, beta, offset, n_obs)
     se = torch.sqrt(torch.diagonal(cov, dim1=1, dim2=2).clamp(min=0) * phi[:, None])
     return BatchFit(beta, se, ll, conv, n_iter, singular, n_obs, infinite & ~singular[:, None])
 
@@ -74,11 +89,13 @@ def _offset_tensor(offset, n, device, dtype):
 
 
 def glm_screen(features, y, covariates=None, family="binomial", device=None,
-               dtype=torch.float64, chunk_size=None, max_iter=25, tol=None, offset=None):
+               dtype=torch.float64, chunk_size=None, max_iter=25, tol=None, offset=None,
+               robust=False):
     """Fit y ~ 1 + covariates + feature_j (+ offset) for every feature column j.
 
     Rows where feature j is missing (NaN) are dropped for that model only.
     offset: optional length-n vector with fixed coefficient 1 (e.g. log person-time, poisson).
+    robust: report HC0 sandwich (heteroskedasticity-robust) standard errors and p-values.
     Returns one row per feature with the feature's beta, se, z, p and diagnostics.
     """
     Fa, names = as_matrix(features, "feature")
@@ -92,17 +109,18 @@ def glm_screen(features, y, covariates=None, family="binomial", device=None,
     off = _offset_tensor(offset, len(yv), dev, dtype)
 
     def fit_chunk(X, w):
-        return _fit_glm_batch(X, yt, w, family, max_iter, tol, off)
+        return _fit_glm_batch(X, yt, w, family, max_iter, tol, off, robust)
 
     rows = screen_features(Fa, Ca, fit_chunk, True, chunk_size, dev, dtype, copies=6)
     return feature_frame(names, rows)
 
 
 def glm_fit(X, y, family="gaussian", intercept=True, device=None, dtype=torch.float64,
-            max_iter=25, tol=None, offset=None):
+            max_iter=25, tol=None, offset=None, robust=False):
     """Fit a single GLM and return its coefficient table (diagnostics in .attrs).
 
     offset: optional length-n vector with fixed coefficient 1 (e.g. log person-time, poisson).
+    robust: report HC0 sandwich (heteroskedasticity-robust) standard errors and p-values.
     """
     Xa, names = as_matrix(X, "x")
     yv = as_vector(y, "y")
@@ -116,4 +134,5 @@ def glm_fit(X, y, family="gaussian", intercept=True, device=None, dtype=torch.fl
     yt = torch.as_tensor(yv, device=dev, dtype=dtype)
     w = torch.ones(1, len(yv), device=dev, dtype=dtype)
     off = _offset_tensor(offset, len(yv), dev, dtype)
-    return coefficient_frame(names, _fit_glm_batch(Xt, yt, w, family, max_iter, tol, off))
+    fit = _fit_glm_batch(Xt, yt, w, family, max_iter, tol, off, robust)
+    return coefficient_frame(names, fit)

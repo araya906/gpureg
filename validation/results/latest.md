@@ -1,4 +1,4 @@
-# Validation 2026-11-21T02:03:57+00:00 (cpu)
+# Validation 2026-11-22T01:47:56+00:00 (cpu)
 
 | check | n | m | pass |
 |---|---|---|---|
@@ -13,6 +13,9 @@
 | screen_cox_efron | 5000 | 100 | yes |
 | screen_cox_breslow | 5000 | 100 | yes |
 | screen_poisson_offset | 5000 | 100 | yes |
+| screen_gaussian_robust | 5000 | 100 | yes |
+| screen_binomial_robust | 5000 | 100 | yes |
+| screen_poisson_robust | 5000 | 100 | yes |
 | screen_cox_efron_strata | 5000 | 100 | yes |
 | screen_cox_efron_entry | 5000 | 100 | yes |
 | screen_cox_breslow_strata | 5000 | 100 | yes |

@@ -13,5 +13,6 @@
 - [x] Cox: support strata (`cox_screen`/`cox_fit`).
 - [x] Cox: support start-stop (left-truncated) data.
 - [x] Lasso: strong-rule screening to skip inactive features along the path.
-- [ ] Optional sandwich (robust) standard errors for GLM and Cox.
+- [x] Optional sandwich (robust) standard errors for GLM (`robust=True`, HC0).
+- [ ] Optional sandwich (robust) standard errors for Cox (Lin–Wei, as `coxph(robust=TRUE)`; check vs statsmodels PHReg / lifelines if available).
 - [ ] Benchmark the automatic chunk-size heuristic on larger simulated data (CPU) and document results.

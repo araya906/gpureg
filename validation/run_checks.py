@@ -112,6 +112,33 @@ def check_screen_poisson_offset(device, n, m, seed=4):
             "time_gpureg_s": t_ours}
 
 
+def check_screen_glm_robust(kind, device, n, m, seed=7):
+    """HC0 sandwich SEs under misspecification vs statsmodels GLM(...).fit(cov_type="HC0").
+
+    gaussian: heteroskedastic noise; binomial: omitted random effect; poisson: negative binomial.
+    """
+    C, F, _ = simulate_screen(kind, n, m, seed)
+    rng = np.random.default_rng(seed + 100)
+    eta = 0.2 + C @ np.array([0.4, -0.3, 0.2]) + 0.5 * np.nan_to_num(F[:, 0])
+    if kind == "gaussian":
+        y = eta + rng.normal(size=n) * (0.5 + np.abs(C[:, 0]))
+    elif kind == "binomial":
+        y = rng.binomial(1, 1 / (1 + np.exp(-eta - rng.normal(size=n)))).astype(float)
+    else:
+        y = rng.negative_binomial(2, 2 / (2 + np.exp(0.5 * eta))).astype(float)
+    start = time.perf_counter()
+    res = glm_screen(F, y, C, family=kind, device=device, robust=True)
+    t_ours = time.perf_counter() - start
+    rows = []
+    for j in range(m):
+        keep = ~np.isnan(F[:, j])
+        X = sm.add_constant(np.column_stack([C[keep], F[keep, j]]))
+        fit = sm.GLM(y[keep], X, family=SM_FAMILIES[kind]).fit(cov_type="HC0")
+        rows.append((fit.params[-1], fit.bse[-1], fit.pvalues[-1]))
+    return {"check": f"screen_{kind}_robust", "n": n, "m": m,
+            **compare_screen(res, np.array(rows)), "time_gpureg_s": t_ours}
+
+
 def check_screen_cox_strata(device, n, m, ties, seed=5):
     """Stratified Cox screen (8 strata, different baseline hazards) vs statsmodels PHReg(strata=)."""
     C, F, _ = simulate_screen("cox", n, m, seed)
@@ -365,6 +392,8 @@ def run_all(quick, device):
         for ties in ("efron", "breslow"):
             checks.append(check_screen("cox", n, m, 2, device, ties))
     checks.append(check_screen_poisson_offset(device, *sizes[-1]))
+    for kind in ("gaussian", "binomial", "poisson"):
+        checks.append(check_screen_glm_robust(kind, device, *sizes[-1]))
     for ties in ("efron", "breslow"):
         checks.append(check_screen_cox_strata(device, *sizes[-1], ties))
         checks.append(check_screen_cox_entry(device, *sizes[-1], ties))
