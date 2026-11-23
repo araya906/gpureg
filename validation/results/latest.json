@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-22T01:47:56+00:00",
+  "timestamp": "2026-11-23T01:52:57+00:00",
   "device": "cpu",
   "torch": "2.15.0+cu132",
   "python": "3.13.18",
@@ -15,8 +15,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.0057724630000848265,
-      "time_reference_s": 0.013516085999981442
+      "time_gpureg_s": 0.005756229000098756,
+      "time_reference_s": 0.010373194999942825
     },
     {
       "check": "screen_binomial",
@@ -28,8 +28,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.00388489399995251,
-      "time_reference_s": 0.015385868000066694
+      "time_gpureg_s": 0.0033847259999220114,
+      "time_reference_s": 0.0121330609999859
     },
     {
       "check": "screen_poisson",
@@ -41,8 +41,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.003933640000013838,
-      "time_reference_s": 0.016527951000057328
+      "time_gpureg_s": 0.002972109999973327,
+      "time_reference_s": 0.012383963000047515
     },
     {
       "check": "screen_cox_efron",
@@ -54,8 +54,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.010306952000064484,
-      "time_reference_s": 0.2400641760000326
+      "time_gpureg_s": 0.008403944999940904,
+      "time_reference_s": 0.17400585600000795
     },
     {
       "check": "screen_cox_breslow",
@@ -67,8 +67,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.009382686999970247,
-      "time_reference_s": 0.12319300299998304
+      "time_gpureg_s": 0.008089857000072698,
+      "time_reference_s": 0.08907089799993173
     },
     {
       "check": "screen_gaussian",
@@ -80,8 +80,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.04310172399993917,
-      "time_reference_s": 0.40125751699997636
+      "time_gpureg_s": 0.05079481799998575,
+      "time_reference_s": 0.34574080000004415
     },
     {
       "check": "screen_binomial",
@@ -93,8 +93,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.06887851400006184,
-      "time_reference_s": 0.5308574949999638
+      "time_gpureg_s": 0.07467659499991441,
+      "time_reference_s": 0.41630419300008725
     },
     {
       "check": "screen_poisson",
@@ -106,8 +106,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.06254045200000746,
-      "time_reference_s": 0.5517458369999986
+      "time_gpureg_s": 0.13654523699995025,
+      "time_reference_s": 0.5323006799999348
     },
     {
       "check": "screen_cox_efron",
@@ -119,8 +119,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.4831154120000747,
-      "time_reference_s": 6.845299951000015
+      "time_gpureg_s": 0.4202813329999344,
+      "time_reference_s": 5.059259525000016
     },
     {
       "check": "screen_cox_breslow",
@@ -132,8 +132,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.4010204279999243,
-      "time_reference_s": 4.313687834999996
+      "time_gpureg_s": 0.40879156500000136,
+      "time_reference_s": 3.058378609999977
     },
     {
       "check": "screen_poisson_offset",
@@ -145,7 +145,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.07236945299996478
+      "time_gpureg_s": 0.0699674249999589
     },
     {
       "check": "screen_gaussian_robust",
@@ -157,7 +157,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.04256485300004442
+      "time_gpureg_s": 0.04419673300003524
     },
     {
       "check": "screen_binomial_robust",
@@ -169,7 +169,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.07642561600005138
+      "time_gpureg_s": 0.06118632699997306
     },
     {
       "check": "screen_poisson_robust",
@@ -181,7 +181,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.05663175799998044
+      "time_gpureg_s": 0.04961352700001953
     },
     {
       "check": "screen_cox_efron_strata",
@@ -193,7 +193,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 1.1412203520000048
+      "time_gpureg_s": 1.3902827819999857
     },
     {
       "check": "screen_cox_efron_entry",
@@ -205,7 +205,19 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.5033577039999955
+      "time_gpureg_s": 0.5072047860001021
+    },
+    {
+      "check": "screen_cox_efron_robust",
+      "n": 2000,
+      "m": 30,
+      "beta_max_abs_err": 1.122157922139877e-13,
+      "se_max_rel_err": 3.863990712900083e-14,
+      "log10p_max_abs_err": 1.0730971666816913e-11,
+      "all_converged": true,
+      "n_infinite": 0,
+      "pass": true,
+      "time_gpureg_s": 0.048774535000006836
     },
     {
       "check": "screen_cox_breslow_strata",
@@ -217,7 +229,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.9803999240000394
+      "time_gpureg_s": 1.2143935160000865
     },
     {
       "check": "screen_cox_breslow_entry",
@@ -229,7 +241,19 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.5177655439999853
+      "time_gpureg_s": 0.5125934200000302
+    },
+    {
+      "check": "screen_cox_breslow_robust",
+      "n": 5000,
+      "m": 100,
+      "beta_max_abs_err": 7.840950111415168e-16,
+      "se_max_rel_err": 4.399157379350715e-15,
+      "log10p_max_abs_err": 1.8474111129762605e-13,
+      "all_converged": true,
+      "n_infinite": 0,
+      "pass": true,
+      "time_gpureg_s": 1.0417465250000078
     },
     {
       "check": "screen_binomial_float32_vs_float64",
@@ -298,14 +322,14 @@
       "check": "lasso_binomial_vs_sklearn",
       "n": 1000,
       "m": 20,
-      "coef_max_abs_err": 3.338418430587353e-10,
+      "coef_max_abs_err": 3.291091843493632e-10,
       "pass": true
     },
     {
       "check": "lasso_cox_vs_sksurv",
       "n": 1000,
       "m": 30,
-      "coef_max_abs_err": 1.7023246945413462e-06,
+      "skipped": "scikit-survival not installed",
       "pass": true
     },
     {

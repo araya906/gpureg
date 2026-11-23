@@ -77,3 +77,9 @@ def test_cox_strata_check_passes(ties):
 def test_lasso_strong_rules_check_passes():
     row = run_checks.check_lasso_strong_rules("cpu", n=300, p=40)
     assert row["pass"] and row["mean_cols_fitted"] < 40
+
+
+@pytest.mark.parametrize("ties", ["efron", "breslow"])
+def test_cox_robust_check_passes(ties):
+    row = run_checks.check_screen_cox_robust("cpu", 400, 5, ties)
+    assert row["pass"] and row["se_max_rel_err"] < 1e-5

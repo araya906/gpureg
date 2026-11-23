@@ -17,6 +17,7 @@ import numpy as np
 import sklearn
 import statsmodels.api as sm
 import torch
+from scipy import stats
 from sklearn.linear_model import Lasso, LogisticRegression
 
 from gpureg import cox_screen, glm_screen, lasso_cv
@@ -182,6 +183,58 @@ def check_screen_cox_entry(device, n, m, ties, seed=6):
                        entry=entry[keep]).fit()
         rows.append((fit.params[-1], fit.bse[-1], fit.pvalues[-1]))
     return {"check": f"screen_cox_{ties}_entry", "n": n, "m": m,
+            **compare_screen(res, np.array(rows)), "time_gpureg_s": t_ours}
+
+
+def _no_event_at_risk(time_, event, entry, strata):
+    """Rows whose (entry, time] window holds no event time of their stratum."""
+    out = np.ones(len(time_), dtype=bool)
+    for s in np.unique(strata):
+        rows, t_ev = strata == s, np.unique(time_[(strata == s) & (event > 0)])
+        upto = np.searchsorted(t_ev, time_[rows], "right")
+        out[rows] = upto == np.searchsorted(t_ev, entry[rows], "right")
+    return out
+
+
+def _phreg_robust_row(time_, event, entry, strata, X, ties):
+    """(beta, se, p) of the last term with the Lin-Wei sandwich from statsmodels' score residuals.
+
+    Rows never at risk at an event time have zero residuals (as in R); statsmodels 0.15 returns NaN
+    or, when (entry, time] holds no event time, a spurious non-zero value for them.
+    """
+    model = sm.PHReg(time_, X, status=event, ties=ties, strata=strata, entry=entry)
+    fit = model.fit()
+    resid = model.score_residuals(fit.params)
+    resid[_no_event_at_risk(time_, event, entry, strata)] = 0.0
+    cov = np.linalg.inv(-model.hessian(fit.params))
+    se = np.sqrt((cov @ resid.T @ resid @ cov)[-1, -1])
+    return fit.params[-1], se, 2 * stats.norm.sf(abs(fit.params[-1] / se))
+
+
+def check_screen_cox_robust(device, n, m, ties, seed=9):
+    """Lin-Wei robust SEs (omitted frailty, 4 strata, delayed entry) vs statsmodels PHReg score
+    residuals. These are Breslow-form, so Efron is checked on untied times, where both forms agree
+    (smaller n, m: statsmodels loops over every event time); tied Efron is tested in tests/.
+    """
+    n, m = (n, m) if ties == "breslow" else (min(n, 2000), min(m, 30))
+    C, F, _ = simulate_screen("cox", n, m, seed)
+    rng = np.random.default_rng(seed + 100)
+    strata = rng.integers(0, 4, size=n)
+    eta = C @ np.array([0.4, -0.3, 0.2]) + 0.5 * np.nan_to_num(F[:, 0]) + rng.normal(size=n)
+    time_ = np.minimum(rng.exponential(1 / np.exp(eta)), rng.exponential(2.0, size=n)) * 30
+    event = (rng.random(n) < 0.7).astype(float)
+    time_ = np.ceil(time_) if ties == "breslow" else time_
+    entry = np.where(rng.random(n) < 0.5, rng.uniform(0.0, 0.9, n) * time_, 0.0)
+    start = time.perf_counter()
+    res = cox_screen(F, time_, event, C, ties=ties, device=device, strata=strata, entry=entry,
+                     robust=True)
+    t_ours = time.perf_counter() - start
+    rows = []
+    for j in range(m):
+        keep = ~np.isnan(F[:, j])
+        X = np.column_stack([C[keep], F[keep, j]])
+        rows.append(_phreg_robust_row(time_[keep], event[keep], entry[keep], strata[keep], X, ties))
+    return {"check": f"screen_cox_{ties}_robust", "n": n, "m": m,
             **compare_screen(res, np.array(rows)), "time_gpureg_s": t_ours}
 
 
@@ -397,6 +450,7 @@ def run_all(quick, device):
     for ties in ("efron", "breslow"):
         checks.append(check_screen_cox_strata(device, *sizes[-1], ties))
         checks.append(check_screen_cox_entry(device, *sizes[-1], ties))
+        checks.append(check_screen_cox_robust(device, *sizes[-1], ties))
     checks.append(check_screen_binomial_float32(device, *sizes[-1]))
     checks.append(check_screen_gaussian_float32_p(device, *sizes[-1]))
     for kind in ("gaussian", "binomial", "poisson", "cox"):

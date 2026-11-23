@@ -32,6 +32,8 @@ tab = cox_fit(X, time, event)
 tab = cox_fit(X, time, event, strata=centre)
 # Start-stop data (left truncation, time-varying covariates): at risk on (entry, time]
 tab = cox_fit(X, stop, event, entry=start)
+# Lin-Wei robust standard errors, as coxph(robust=TRUE) (cox_screen too)
+tab = cox_fit(X, time, event, robust=True)
 
 # Lasso / elastic net with 10-fold CV; folds are fitted together as one batch
 fit = lasso_cv(proteins_and_covs, family="cox", time=time, event=event,
@@ -53,7 +55,7 @@ Inputs can be numpy arrays or pandas objects; DataFrame column names are kept.
 - **Missing feature values** (NaN) are handled per model with zero weights, so each model uses its own complete rows. Outcome and covariates must be complete.
 - **Precision**: `float64` by default. Consumer GPUs run float64 much slower than float32; pass `dtype=torch.float32` for speed at the cost of accuracy in SEs and very small p-values.
 - **Diagnostics** per model: `converged`, `n_iter`, `singular` (information matrix rank-deficient, e.g. a constant or collinear feature, or in Cox one constant within every stratum; `se`, `z` and `p` are then NaN), `n_obs`, `infinite` (an estimate diverges: complete or quasi-separation in a GLM, monotone likelihood in Cox; detected as in R's `coxph` from the Newton step still left at the end, and reported with a warning; such fits have very large SEs with p near 1). `glm_fit`/`cox_fit` give `infinite` per term.
-- **Robust SEs** (`robust=True`, GLM only): HC0 sandwich `I⁻¹ (Σ rᵢ² xᵢxᵢ') I⁻¹` with `r = y − μ`, no dispersion or small-sample factor (statsmodels `cov_type="HC0"`, R `sandwich::vcovHC(type="HC0")`). Estimates are unchanged; `se`, `z` and `p` use the robust covariance.
+- **Robust SEs** (`robust=True`): GLM uses the HC0 sandwich `I⁻¹ (Σ rᵢ² xᵢxᵢ') I⁻¹` with `r = y − μ`, no dispersion or small-sample factor (statsmodels `cov_type="HC0"`, R `sandwich::vcovHC(type="HC0")`). Cox uses the Lin–Wei sandwich `D'D` with dfbeta `D = U I⁻¹` from per-row score residuals `U` (Efron-weighted for tied deaths, combining with strata and entry), as R `coxph(robust=TRUE)` without `cluster`. Estimates are unchanged; `se`, `z` and `p` use the robust covariance.
 - **Lasso standardization** uses population SDs on the full data (also for CV folds); coefficients are returned on the original scale. CV error is held-out deviance per observation; Cox uses the Verweij–van Houwelingen cross-validated partial likelihood.
 - **Lasso strong rules** (`strong_rules=True`, default): each lambda is fitted only on the sequential strong set (union over CV folds), then the KKT conditions are checked on the dropped columns and violators are added and refitted, so the path is unchanged. `fit.n_fitted` gives the columns fitted per lambda. The saving is largest early in the path and when few features enter; in CPU trials (5 folds, p up to 3000) it saved 0-23% of the time.
 

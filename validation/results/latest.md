@@ -1,4 +1,4 @@
-# Validation 2026-11-22T01:47:56+00:00 (cpu)
+# Validation 2026-11-23T01:52:57+00:00 (cpu)
 
 | check | n | m | pass |
 |---|---|---|---|
@@ -18,8 +18,10 @@
 | screen_poisson_robust | 5000 | 100 | yes |
 | screen_cox_efron_strata | 5000 | 100 | yes |
 | screen_cox_efron_entry | 5000 | 100 | yes |
+| screen_cox_efron_robust | 2000 | 30 | yes |
 | screen_cox_breslow_strata | 5000 | 100 | yes |
 | screen_cox_breslow_entry | 5000 | 100 | yes |
+| screen_cox_breslow_robust | 5000 | 100 | yes |
 | screen_binomial_float32_vs_float64 | 5000 | 100 | yes |
 | screen_gaussian_float32_pvalues | 5000 | 100 | yes |
 | degenerate_gaussian | 500 | 4 | yes |
@@ -29,7 +31,7 @@
 | lasso_gaussian_vs_sklearn | 1000 | 50 | yes |
 | lasso_gaussian_float32_vs_float64 | 1000 | 50 | yes |
 | lasso_binomial_vs_sklearn | 1000 | 20 | yes |
-| lasso_cox_vs_sksurv | 1000 | 30 | yes |
+| lasso_cox_vs_sksurv | 1000 | 30 | skipped (scikit-survival not installed) |
 | lasso_cox_signal_recovery | 2000 | 50 | yes |
 | lasso_strong_rules_vs_full | 1000 | 200 | yes |
 

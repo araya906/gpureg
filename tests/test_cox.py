@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import statsmodels.api as sm
+import torch
 
 from gpureg import cox_fit, cox_screen
 
@@ -179,3 +180,62 @@ def test_zero_entry_equals_no_entry_and_bad_entry_is_rejected():
         cox_fit(F, time, event, entry=time)
     with pytest.raises(ValueError, match="missing"):
         cox_fit(F, time, event, entry=np.r_[np.nan, np.zeros(len(time) - 1)])
+
+
+def _efron_score_residuals_loop(X, time, event, beta):
+    """Reference loop over death times (R's coxscore, Efron): tied deaths share each l/d step,
+    and their own risk weight at step l is (1 - l/d)."""
+    r, U = np.exp(X @ beta), np.zeros_like(X)
+    for t in np.unique(time[event == 1]):
+        dead, risk = (time == t) & (event == 1), time >= t
+        d, s0, s1 = dead.sum(), r[risk].sum(), r[risk] @ X[risk]
+        e0, e1 = r[dead].sum(), r[dead] @ X[dead]
+        for ell in range(d):
+            f = ell / d
+            den, xbar = s0 - f * e0, (s1 - f * e1) / (s0 - f * e0)
+            U[dead] += (X[dead] - xbar) / d
+            wt = np.where(dead, 1 - f, 1.0)[risk] * r[risk] / den
+            U[risk] -= wt[:, None] * (X[risk] - xbar)
+    return U
+
+
+@pytest.mark.parametrize("ties", ["efron", "breslow"])
+def test_score_residuals_sum_to_score_and_match_loop(ties):
+    from gpureg._risksets import build_risk_sets
+    from gpureg.cox import _cox_score_residuals
+    C, F, time, event = _simulate_cox(n=300)
+    X = np.column_stack([C, F[:, 0]])
+    beta = np.array([0.3, -0.2, 0.4])
+    order = np.argsort(-time, kind="stable")
+    rs = build_risk_sets(time[order], event[order], "cpu")
+    U = _cox_score_residuals(torch.tensor(beta)[None], torch.tensor(X[order])[None],
+                             torch.tensor(event[order]), torch.ones(1, len(time),
+                             dtype=torch.float64), rs, ties == "efron")[0].numpy()
+    ref = sm.PHReg(time, X, status=event, ties=ties)
+    np.testing.assert_allclose(U.sum(0), ref.score(beta), rtol=1e-10, atol=1e-10)
+    if ties == "efron":
+        np.testing.assert_allclose(U, _efron_score_residuals_loop(X, time, event, beta)[order],
+                                   rtol=1e-10, atol=1e-12)
+
+
+def test_robust_efron_fit_matches_loop_sandwich_with_ties():
+    C, F, time, event = _simulate_cox(seed=3)
+    X = np.column_stack([C, F[:, :2]])
+    tab = cox_fit(X, time, event, ties="efron", robust=True)
+    fit = sm.PHReg(time, X, status=event, ties="efron").fit()
+    U = _efron_score_residuals_loop(X, time, event, fit.params)
+    cov = fit.cov_params()
+    np.testing.assert_allclose(tab["beta"], fit.params, atol=1e-8)
+    np.testing.assert_allclose(tab["se"], np.sqrt(np.diag(cov @ U.T @ U @ cov)), rtol=1e-6)
+
+
+def test_robust_keeps_estimates_flags_and_float32():
+    C, F, time, event = _simulate_cox()
+    F[:, 2] = 1.0  # constant: singular, robust se stays NaN
+    plain = cox_screen(F, time, event, C)
+    rob = cox_screen(F, time, event, C, robust=True)
+    rob32 = cox_screen(F, time, event, C, robust=True, dtype=torch.float32)
+    np.testing.assert_array_equal(rob["beta"], plain["beta"])
+    assert rob["singular"][2] and np.isnan(rob["se"][2])
+    assert not np.allclose(rob["se"][:2], plain["se"][:2], rtol=1e-3)
+    np.testing.assert_allclose(rob32["se"][:2], rob["se"][:2], rtol=1e-4)
