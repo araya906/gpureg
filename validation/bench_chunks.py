@@ -98,7 +98,7 @@ def write_report(rows, out_dir):
             "simulate_screen; cox times are integers 1..~300, cox_untied jitters them apart); "
             "peak MB is the RSS high-water mark added by the screen (fresh process per row, "
             "data already in memory); heuristic MB is what auto_chunk_size assumes the chunk "
-            "needs (models/chunk x n x k x 8 bytes x copies; budget 2e9 bytes on CPU).", ""]
+            "needs (models/chunk x n x k x 8 bytes x copies; CPU default: budget 256e6 bytes, at most 64 models).", ""]
     (out_dir / "bench_chunks.md").write_text("\n".join(head + _table(rows)) + "\n")
 
 

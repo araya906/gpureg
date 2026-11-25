@@ -200,3 +200,13 @@ def test_robust_keeps_estimates_and_singular_se_nan():
     np.testing.assert_array_equal(rob["beta"], plain["beta"])
     assert rob["singular"][1] and np.isnan(rob["se"][1])
     assert np.isfinite(rob["se"][[0, 2, 3]]).all()
+
+
+def test_auto_chunk_size_cpu_budget_and_cap():
+    from gpureg._device import auto_chunk_size
+    cpu = torch.device("cpu")
+    assert auto_chunk_size(1000, 5, torch.float64, cpu, copies=6) == 64  # capped
+    per_model = 100000 * 5 * 8 * 6
+    assert auto_chunk_size(100000, 5, torch.float64, cpu, copies=6) == int(256e6 // per_model)
+    assert auto_chunk_size(10 ** 7, 5, torch.float64, cpu, copies=6) == 1
+    assert auto_chunk_size(1000, 5, torch.float64, cpu, copies=6, cpu_cap=8) == 8
