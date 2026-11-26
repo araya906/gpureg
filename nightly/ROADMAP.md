@@ -18,3 +18,5 @@
 - [x] Benchmark the automatic chunk-size heuristic on larger simulated data (CPU) and document results.
 - [x] CPU chunk size: the 2 GB CPU budget gives chunks 1.3-2.2x slower than 16-64 models (validation/results/bench_chunks.md); lower the CPU default (e.g. a budget or cap giving ~16-64 models) and re-run the benchmark.
 - [x] Cox chunk memory: `copies = 8 + 2 * max_ties` overestimates peak memory 10-160x with heavy ties (chunk 1 at n >= 20000); size the tie term from the actual padded Efron tensors and check measured peak vs estimate in the benchmark.
+- [ ] Cox lasso: support `strata=` in `lasso_cv(family="cox")` (Breslow partial likelihood with risk sets within strata, reusing `_risksets`; CV deviance per stratum-aware risk set); check vs scikit-survival or a stratified reference if available, else vs unpenalized `cox_fit(strata=)` at lambda -> 0.
+- [ ] Cox lasso: support `entry=` (start-stop / left truncation) in `lasso_cv(family="cox")`, combining with strata; check vs unpenalized `cox_fit(entry=)` at lambda -> 0 and an episode-splitting test.
