@@ -239,3 +239,19 @@ def test_robust_keeps_estimates_flags_and_float32():
     assert rob["singular"][2] and np.isnan(rob["se"][2])
     assert not np.allclose(rob["se"][:2], plain["se"][:2], rtol=1e-3)
     np.testing.assert_allclose(rob32["se"][:2], rob["se"][:2], rtol=1e-4)
+
+
+def test_chunk_copies_follow_padded_efron_tensors():
+    from gpureg._device import auto_chunk_size
+    from gpureg.cox import _cox_setup, _tie_weights, chunk_copies
+    rng = np.random.default_rng(3)
+    n = 20000
+    time, event = rng.integers(1, 200, size=n).astype(float), (rng.random(n) < 0.5) * 1.0
+    cpu = torch.device("cpu")
+    _, ev, rs = _cox_setup(time, event, None, None, cpu, torch.float64)
+    X = torch.zeros(1, n, 4, dtype=torch.float64)
+    valid = _tie_weights(ev, torch.ones(1, n, dtype=torch.float64), rs, True, X)[1]
+    assert rs.max_ties > 30 and valid.shape[1:] == (rs.event_groups.numel(), rs.max_ties)
+    assert chunk_copies(rs, n, False) == pytest.approx(8 + 3 * valid[0].numel() / n)
+    assert chunk_copies(rs, n, True) == pytest.approx(12 + 5 * valid[0].numel() / n)
+    assert auto_chunk_size(n, 4, torch.float64, cpu, chunk_copies(rs, n, False)) >= 16

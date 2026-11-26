@@ -43,9 +43,9 @@ def _heuristic(kind, n, out):
     """(max ties, k, copies) as glm_screen / cox_screen pass them to auto_chunk_size."""
     if not kind.startswith("cox"):
         return 0, 5, 6
-    from gpureg.cox import _cox_setup
-    ties = _cox_setup(out[0], out[1], None, None, torch.device("cpu"), torch.float64)[2].max_ties
-    return ties, 4, 8 + 2 * ties
+    from gpureg.cox import _cox_setup, chunk_copies
+    rs = _cox_setup(out[0], out[1], None, None, torch.device("cpu"), torch.float64)[2]
+    return rs.max_ties, 4, chunk_copies(rs, n, False)
 
 
 def run_one(kind, n, m, chunk):

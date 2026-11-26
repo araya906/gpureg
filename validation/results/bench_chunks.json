@@ -1,5 +1,5 @@
 {
-  "time": "2026-11-25T01:50:58+00:00",
+  "time": "2026-11-26T01:51:19+00:00",
   "platform": "Linux-6.18.44-fc-v880-x86_64-with-glibc2.39",
   "torch": "2.15.0+cu132",
   "threads": 2,
@@ -11,8 +11,8 @@
       "chunk": "auto",
       "used": 64,
       "max_ties": 0,
-      "seconds": 0.9688144729999522,
-      "peak_mb": 93.015625,
+      "seconds": 0.8565572190000239,
+      "peak_mb": 95.92578125,
       "predicted_mb": 73.2421875,
       "converged": 1.0
     },
@@ -23,8 +23,8 @@
       "chunk": "16",
       "used": 16,
       "max_ties": 0,
-      "seconds": 1.1379941980000012,
-      "peak_mb": 49.50390625,
+      "seconds": 1.024304925000024,
+      "peak_mb": 46.9609375,
       "predicted_mb": 18.310546875,
       "converged": 1.0
     },
@@ -35,8 +35,8 @@
       "chunk": "64",
       "used": 64,
       "max_ties": 0,
-      "seconds": 1.037595013999976,
-      "peak_mb": 90.67578125,
+      "seconds": 0.8963672730000098,
+      "peak_mb": 95.4609375,
       "predicted_mb": 73.2421875,
       "converged": 1.0
     },
@@ -47,8 +47,8 @@
       "chunk": "256",
       "used": 256,
       "max_ties": 0,
-      "seconds": 1.4938975430000028,
-      "peak_mb": 287.66796875,
+      "seconds": 1.0476174949999404,
+      "peak_mb": 238.84375,
       "predicted_mb": 292.96875,
       "converged": 1.0
     },
@@ -59,8 +59,8 @@
       "chunk": "1024",
       "used": 1024,
       "max_ties": 0,
-      "seconds": 2.560896062999973,
-      "peak_mb": 851.859375,
+      "seconds": 2.2198019749999958,
+      "peak_mb": 851.828125,
       "predicted_mb": 1171.875,
       "converged": 1.0
     },
@@ -71,8 +71,8 @@
       "chunk": "auto",
       "used": 53,
       "max_ties": 0,
-      "seconds": 2.4111199889999853,
-      "peak_mb": 232.84765625,
+      "seconds": 1.8249029150000524,
+      "peak_mb": 208.59375,
       "predicted_mb": 242.61474609375,
       "converged": 1.0
     },
@@ -83,8 +83,8 @@
       "chunk": "16",
       "used": 16,
       "max_ties": 0,
-      "seconds": 2.0404153139999153,
-      "peak_mb": 82.28125,
+      "seconds": 1.7005549269999847,
+      "peak_mb": 79.94921875,
       "predicted_mb": 73.2421875,
       "converged": 1.0
     },
@@ -95,8 +95,8 @@
       "chunk": "64",
       "used": 64,
       "max_ties": 0,
-      "seconds": 2.462444894999976,
-      "peak_mb": 248.80859375,
+      "seconds": 1.816208405999987,
+      "peak_mb": 257.375,
       "predicted_mb": 292.96875,
       "converged": 1.0
     },
@@ -107,8 +107,8 @@
       "chunk": "256",
       "used": 256,
       "max_ties": 0,
-      "seconds": 5.155418988000065,
-      "peak_mb": 855.05859375,
+      "seconds": 4.188066699999922,
+      "peak_mb": 841.08984375,
       "predicted_mb": 1171.875,
       "converged": 1.0
     },
@@ -119,8 +119,8 @@
       "chunk": "auto",
       "used": 10,
       "max_ties": 0,
-      "seconds": 2.445969949000073,
-      "peak_mb": 214.22265625,
+      "seconds": 1.8462892830000328,
+      "peak_mb": 190.28125,
       "predicted_mb": 228.8818359375,
       "converged": 1.0
     },
@@ -131,8 +131,8 @@
       "chunk": "16",
       "used": 16,
       "max_ties": 0,
-      "seconds": 2.7947771400000647,
-      "peak_mb": 342.5703125,
+      "seconds": 2.141439630999912,
+      "peak_mb": 328.734375,
       "predicted_mb": 366.2109375,
       "converged": 1.0
     },
@@ -143,8 +143,8 @@
       "chunk": "64",
       "used": 64,
       "max_ties": 0,
-      "seconds": 5.217992676000108,
-      "peak_mb": 1048.5703125,
+      "seconds": 3.92405045299995,
+      "peak_mb": 1106.46484375,
       "predicted_mb": 1464.84375,
       "converged": 1.0
     },
@@ -153,11 +153,11 @@
       "n": 5000,
       "m": 1000,
       "chunk": "auto",
-      "used": 3,
+      "used": 64,
       "max_ties": 221,
-      "seconds": 4.879044718000046,
-      "peak_mb": 53.57421875,
-      "predicted_mb": 205.99365234375,
+      "seconds": 3.9754189970000198,
+      "peak_mb": 314.00390625,
+      "predicted_mb": 242.58007812500003,
       "converged": 1.0
     },
     {
@@ -167,9 +167,9 @@
       "chunk": "16",
       "used": 16,
       "max_ties": 221,
-      "seconds": 3.4421298409999963,
-      "peak_mb": 109.453125,
-      "predicted_mb": 1098.6328125,
+      "seconds": 3.226940259999992,
+      "peak_mb": 106.70703125,
+      "predicted_mb": 60.64501953125001,
       "converged": 1.0
     },
     {
@@ -179,9 +179,9 @@
       "chunk": "64",
       "used": 64,
       "max_ties": 221,
-      "seconds": 4.757874304999973,
-      "peak_mb": 313.953125,
-      "predicted_mb": 4394.53125,
+      "seconds": 4.597120572999984,
+      "peak_mb": 316.89453125,
+      "predicted_mb": 242.58007812500003,
       "converged": 1.0
     },
     {
@@ -191,9 +191,9 @@
       "chunk": "256",
       "used": 256,
       "max_ties": 221,
-      "seconds": 9.102224475999947,
-      "peak_mb": 970.078125,
-      "predicted_mb": 17578.125,
+      "seconds": 8.792669008999951,
+      "peak_mb": 1018.94921875,
+      "predicted_mb": 970.3203125000001,
       "converged": 1.0
     },
     {
@@ -201,11 +201,11 @@
       "n": 20000,
       "m": 400,
       "chunk": "auto",
-      "used": 1,
+      "used": 12,
       "max_ties": 907,
-      "seconds": 10.827164401999994,
-      "peak_mb": 64.2734375,
-      "predicted_mb": 1112.060546875,
+      "seconds": 8.902728162000017,
+      "peak_mb": 311.7109375,
+      "predicted_mb": 229.98486328125,
       "converged": 1.0
     },
     {
@@ -215,9 +215,9 @@
       "chunk": "16",
       "used": 16,
       "max_ties": 907,
-      "seconds": 16.151971884999966,
-      "peak_mb": 365.7109375,
-      "predicted_mb": 17792.96875,
+      "seconds": 15.200211996000007,
+      "peak_mb": 365.71484375,
+      "predicted_mb": 306.646484375,
       "converged": 1.0
     },
     {
@@ -227,9 +227,9 @@
       "chunk": "64",
       "used": 64,
       "max_ties": 907,
-      "seconds": 19.10370275599996,
-      "peak_mb": 1102.40234375,
-      "predicted_mb": 71171.875,
+      "seconds": 18.21432969199998,
+      "peak_mb": 1092.6640625,
+      "predicted_mb": 1226.5859375,
       "converged": 1.0
     },
     {
@@ -239,9 +239,9 @@
       "chunk": "256",
       "used": 256,
       "max_ties": 907,
-      "seconds": 26.855609653999977,
-      "peak_mb": 3894.70703125,
-      "predicted_mb": 284687.5,
+      "seconds": 24.490829942999994,
+      "peak_mb": 3972.78125,
+      "predicted_mb": 4906.34375,
       "converged": 1.0
     },
     {
@@ -249,11 +249,11 @@
       "n": 50000,
       "m": 100,
       "chunk": "auto",
-      "used": 1,
+      "used": 4,
       "max_ties": 2261,
-      "seconds": 6.275173554999924,
-      "peak_mb": 100.078125,
-      "predicted_mb": 6912.2314453125,
+      "seconds": 5.970754608999982,
+      "peak_mb": 301.1328125,
+      "predicted_mb": 211.11669921875,
       "converged": 1.0
     },
     {
@@ -263,9 +263,9 @@
       "chunk": "16",
       "used": 16,
       "max_ties": 2261,
-      "seconds": 12.350207032999947,
-      "peak_mb": 944.50390625,
-      "predicted_mb": 110595.703125,
+      "seconds": 11.790610772000036,
+      "peak_mb": 944.51171875,
+      "predicted_mb": 844.466796875,
       "converged": 1.0
     },
     {
@@ -275,9 +275,9 @@
       "chunk": "64",
       "used": 64,
       "max_ties": 2261,
-      "seconds": 17.27019682699995,
-      "peak_mb": 2737.33203125,
-      "predicted_mb": 442382.8125,
+      "seconds": 15.536598091000087,
+      "peak_mb": 2786.125,
+      "predicted_mb": 3377.8671875,
       "converged": 1.0
     },
     {
@@ -287,9 +287,9 @@
       "chunk": "auto",
       "used": 64,
       "max_ties": 1,
-      "seconds": 1.8943610290000379,
-      "peak_mb": 127.61328125,
-      "predicted_mb": 97.65625,
+      "seconds": 1.6744757269999582,
+      "peak_mb": 122.625,
+      "predicted_mb": 97.2265625,
       "converged": 1.0
     },
     {
@@ -299,9 +299,9 @@
       "chunk": "16",
       "used": 16,
       "max_ties": 1,
-      "seconds": 1.9660779229999434,
-      "peak_mb": 61.5390625,
-      "predicted_mb": 24.4140625,
+      "seconds": 1.858422164999979,
+      "peak_mb": 60.18359375,
+      "predicted_mb": 24.306640625,
       "converged": 1.0
     },
     {
@@ -311,9 +311,9 @@
       "chunk": "64",
       "used": 64,
       "max_ties": 1,
-      "seconds": 2.030407883999942,
-      "peak_mb": 127.6171875,
-      "predicted_mb": 97.65625,
+      "seconds": 1.7095146660000182,
+      "peak_mb": 127.72265625,
+      "predicted_mb": 97.2265625,
       "converged": 1.0
     },
     {
@@ -323,9 +323,9 @@
       "chunk": "256",
       "used": 256,
       "max_ties": 1,
-      "seconds": 2.820379975000037,
-      "peak_mb": 374.28515625,
-      "predicted_mb": 390.625,
+      "seconds": 2.476383067000029,
+      "peak_mb": 367.4921875,
+      "predicted_mb": 388.90625,
       "converged": 1.0
     },
     {
@@ -335,9 +335,9 @@
       "chunk": "auto",
       "used": 40,
       "max_ties": 1,
-      "seconds": 4.219370297999944,
-      "peak_mb": 259.3359375,
-      "predicted_mb": 244.140625,
+      "seconds": 3.164844128000027,
+      "peak_mb": 259.3203125,
+      "predicted_mb": 243.12866210937503,
       "converged": 1.0
     },
     {
@@ -347,9 +347,9 @@
       "chunk": "16",
       "used": 16,
       "max_ties": 1,
-      "seconds": 3.286865190999947,
+      "seconds": 2.6844992219999995,
       "peak_mb": 117.5234375,
-      "predicted_mb": 97.65625,
+      "predicted_mb": 97.25146484375,
       "converged": 1.0
     },
     {
@@ -359,9 +359,9 @@
       "chunk": "64",
       "used": 64,
       "max_ties": 1,
-      "seconds": 4.234782496999969,
-      "peak_mb": 365.77734375,
-      "predicted_mb": 390.625,
+      "seconds": 3.686520802000018,
+      "peak_mb": 392.90625,
+      "predicted_mb": 389.005859375,
       "converged": 1.0
     },
     {
@@ -371,9 +371,9 @@
       "chunk": "256",
       "used": 256,
       "max_ties": 1,
-      "seconds": 7.457084033000001,
-      "peak_mb": 1161.73046875,
-      "predicted_mb": 1562.5,
+      "seconds": 7.206359759000065,
+      "peak_mb": 1161.7890625,
+      "predicted_mb": 1556.0234375,
       "converged": 1.0
     },
     {
@@ -383,9 +383,9 @@
       "chunk": "auto",
       "used": 16,
       "max_ties": 1,
-      "seconds": 2.3406834520000075,
-      "peak_mb": 244.1875,
-      "predicted_mb": 244.140625,
+      "seconds": 2.405794152999988,
+      "peak_mb": 244.1796875,
+      "predicted_mb": 243.353515625,
       "converged": 1.0
     },
     {
@@ -395,9 +395,9 @@
       "chunk": "16",
       "used": 16,
       "max_ties": 1,
-      "seconds": 2.1850919899999326,
-      "peak_mb": 245.73828125,
-      "predicted_mb": 244.140625,
+      "seconds": 2.1678803250000556,
+      "peak_mb": 245.7421875,
+      "predicted_mb": 243.353515625,
       "converged": 1.0
     },
     {
@@ -407,9 +407,9 @@
       "chunk": "64",
       "used": 64,
       "max_ties": 1,
-      "seconds": 4.344947710000042,
-      "peak_mb": 798.84375,
-      "predicted_mb": 976.5625,
+      "seconds": 3.751077787999975,
+      "peak_mb": 793.1875,
+      "predicted_mb": 973.4140625,
       "converged": 1.0
     }
   ]

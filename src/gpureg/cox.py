@@ -146,6 +146,13 @@ def _constant_columns(X, w, rs):
     return (hi <= lo).all(1).any(1)
 
 
+def chunk_copies(rs, n, robust):
+    """(n, k)-sized tensors per model for auto_chunk_size: 8 for the design and group sums, plus
+    the padded Efron tensors (Ge, max_ties, k), about 3 alive at once (5 with robust SEs)."""
+    padded = rs.event_groups.numel() * max(rs.max_ties, 1) / max(n, 1)
+    return 8 + (5 if robust else 3) * padded + 4 * bool(robust)
+
+
 def _fit_cox_batch(X, event, w, rs, efron, max_iter, tol, robust=False):
     fun = _cox_objective(X, event, w, rs, efron)
     beta0 = X.new_zeros(X.shape[0], X.shape[2])
@@ -180,7 +187,7 @@ def cox_screen(features, time, event, covariates=None, ties="efron", device=None
         return _fit_cox_batch(X, ev, w, rs, ties == "efron", max_iter, tol, robust)
 
     rows = screen_features(Fa[order], Ca[order], fit_chunk, False, chunk_size, dev, dtype,
-                           copies=8 + 2 * rs.max_ties + 4 * bool(robust))
+                           copies=chunk_copies(rs, len(order), robust))
     return feature_frame(names, rows)
 
 
