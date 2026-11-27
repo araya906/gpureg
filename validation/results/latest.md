@@ -1,4 +1,4 @@
-# Validation 2026-11-26T01:53:56+00:00 (cpu)
+# Validation 2026-11-27T01:51:29+00:00 (cpu)
 
 | check | n | m | pass |
 |---|---|---|---|
@@ -32,6 +32,7 @@
 | lasso_gaussian_float32_vs_float64 | 1000 | 50 | yes |
 | lasso_binomial_vs_sklearn | 1000 | 20 | yes |
 | lasso_cox_vs_sksurv | 1000 | 30 | skipped (scikit-survival not installed) |
+| lasso_cox_strata_vs_statsmodels | 1000 | 20 | yes |
 | lasso_cox_signal_recovery | 2000 | 50 | yes |
 | lasso_strong_rules_vs_full | 1000 | 200 | yes |
 

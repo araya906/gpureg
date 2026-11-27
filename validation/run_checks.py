@@ -33,7 +33,7 @@ _SK_L1 = ({"l1_ratio": 1.0} if tuple(int(v) for v in sklearn.__version__.split("
           else {"penalty": "l1"})
 TOL = {"beta_abs": 1e-5, "se_rel": 1e-4, "log10p_abs": 1e-3, "lasso_gauss_abs": 1e-5,
        "lasso_binom_abs": 1e-3, "lasso_cox_abs": 1e-4, "lasso_f32_abs": 1e-4, "screen_f32_beta_abs": 1e-4,
-       "screen_f32_log10p_rel": 1e-4, "lasso_strong_abs": 1e-8}
+       "screen_f32_log10p_rel": 1e-4, "lasso_strong_abs": 1e-8, "lasso_kkt_abs": 1e-6}
 SM_FAMILIES = {"gaussian": sm.families.Gaussian(), "binomial": sm.families.Binomial(),
                "poisson": sm.families.Poisson()}
 
@@ -326,6 +326,47 @@ def check_lasso_cox(device, n=1000, p=30):
     return {**row, "coef_max_abs_err": err, "pass": err <= TOL["lasso_cox_abs"]}
 
 
+def _phreg_lasso_kkt(model, beta, lam):
+    """Max violation of the lasso KKT conditions, using statsmodels' stratified score."""
+    g = model.score(beta) / model.nobs
+    nz = beta != 0
+    return max(np.abs(g[nz] - lam * np.sign(beta[nz])).max(initial=0.0),
+               (np.abs(g[~nz]) - lam).max(initial=0.0))
+
+
+def check_lasso_cox_strata(device, n=1000, p=20):
+    """Stratified Breslow Cox lasso (4 strata, tied times) vs statsmodels
+    PHReg(strata=).fit_regularized(L1_wt=1), whose objective matches on standardized X.
+
+    Gated: gpureg's KKT residual from statsmodels' score at every lambda, and coefficients at the
+    lambdas where statsmodels' coordinate descent itself satisfies KKT (it can leave a violating
+    coefficient at zero; such lambdas are counted in ref_not_optimal).
+    """
+    X = _standardized(n, p, 18)
+    rng = np.random.default_rng(19)
+    strata = rng.integers(0, 4, size=n)
+    eta = X[:, :3] @ np.array([0.8, -0.6, 0.5]) + 0.5 * strata
+    t_event = np.ceil(rng.exponential(1 / np.exp(eta)) * 20)
+    t_cens = np.ceil(rng.exponential(2.0, size=n) * 20)
+    time_, event = np.minimum(t_event, t_cens), (t_event <= t_cens).astype(float)
+    res = lasso_cv(X, family="cox", time=time_, event=event, strata=strata, n_folds=0,
+                   n_lambda=10, device=device, tol=1e-10, max_iter=50000)
+    model = sm.PHReg(time_, X, status=event, ties="breslow", strata=strata)
+    err = kkt = 0.0
+    not_opt = 0
+    for lam, coef in zip(res.lambdas, res.coef):
+        kkt = max(kkt, _phreg_lasso_kkt(model, coef, lam))
+        ref = model.fit_regularized(alpha=lam, L1_wt=1.0).params
+        if _phreg_lasso_kkt(model, ref, lam) > TOL["lasso_kkt_abs"]:
+            not_opt += 1
+            continue
+        err = max(err, float(np.abs(coef - ref).max()))
+    return {"check": "lasso_cox_strata_vs_statsmodels", "n": n, "m": p, "coef_max_abs_err": err,
+            "kkt_max_abs": kkt, "ref_not_optimal": not_opt,
+            "pass": err <= TOL["lasso_cox_abs"] and kkt <= TOL["lasso_kkt_abs"]
+            and not_opt < len(res.lambdas)}
+
+
 def check_lasso_strong_rules(device, n=1000, p=200):
     """Binomial CV path with and without strong-rule screening: same coefficients and CV curve."""
     X = _standardized(n, p, 18)
@@ -456,7 +497,8 @@ def run_all(quick, device):
     for kind in ("gaussian", "binomial", "poisson", "cox"):
         checks.append(check_degenerate(kind, device))
     for fn in (check_lasso_gaussian, check_lasso_gaussian_float32, check_lasso_binomial,
-               check_lasso_cox, check_lasso_cox_recovery, check_lasso_strong_rules):
+               check_lasso_cox, check_lasso_cox_strata, check_lasso_cox_recovery,
+               check_lasso_strong_rules):
         checks.append(fn(device))
     return checks
 

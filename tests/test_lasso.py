@@ -89,3 +89,54 @@ def test_strong_rules_kkt_check_recovers_dropped_features(monkeypatch):
                      strong_rules=sr) for sr in (True, False)]
     np.testing.assert_allclose(fits[0].coef, fits[1].coef, atol=1e-6)  # refits restart FISTA; tol 1e-7
     assert fits[0].n_fitted[-1] > 3
+
+
+def _stratified_cox(n, p, seed):
+    X = _standardized(n, p, seed)
+    rng = np.random.default_rng(seed + 1)
+    strata = rng.integers(0, 3, size=n)
+    eta = X[:, :2] @ np.array([0.8, -0.6]) + 0.7 * strata
+    t_event = np.ceil(rng.exponential(1 / np.exp(eta)) * 15)
+    t_cens = np.ceil(rng.exponential(2.0, size=n) * 15)
+    return X, np.minimum(t_event, t_cens), (t_event <= t_cens).astype(float), strata
+
+
+def test_cox_strata_matches_statsmodels_regularized():
+    import statsmodels.api as sm
+    X, time, event, strata = _stratified_cox(400, 8, 20)
+    res = lasso_cv(X, family="cox", time=time, event=event, strata=strata, n_folds=0,
+                   n_lambda=8, device="cpu", tol=1e-10, max_iter=50000)
+    for i in (2, 7):
+        ref = sm.PHReg(time, X, status=event, ties="breslow", strata=strata).fit_regularized(
+            alpha=res.lambdas[i], L1_wt=1.0)
+        np.testing.assert_allclose(res.coef[i], ref.params, atol=1e-6)
+
+
+def test_cox_strata_gradient_matches_autograd():
+    from gpureg import lasso as lasso_mod
+    X, time, event, strata = _stratified_cox(200, 4, 22)
+    prob = lasso_mod._lasso_problem(X, None, "cox", time, event, strata, None, 3, 0, "cpu",
+                                    torch.float64)
+    beta = torch.randn(prob.W.shape[0], X.shape[1], dtype=torch.float64, requires_grad=True)
+    eta = beta @ prob.X.T
+    ll, r = lasso_mod._lasso_loglik("cox", eta, prob.y, prob.W, prob.rs)
+    (grad,) = torch.autograd.grad(ll.sum(), beta)
+    torch.testing.assert_close(grad, r.detach() @ prob.X)
+
+
+def test_cox_single_stratum_equals_unstratified():
+    X, time, event, _ = _stratified_cox(300, 6, 24)
+    kw = dict(family="cox", time=time, event=event, n_folds=3, n_lambda=10, device="cpu")
+    a = lasso_cv(X, strata=np.full(300, "s"), **kw)
+    b = lasso_cv(X, **kw)
+    np.testing.assert_allclose(a.coef, b.coef, atol=1e-12)
+    np.testing.assert_allclose(a.cv_mean, b.cv_mean, atol=1e-12)
+
+
+def test_cox_strata_cv_runs_and_rejects_other_families():
+    X, time, event, strata = _stratified_cox(300, 6, 26)
+    res = lasso_cv(X, family="cox", time=time, event=event, strata=strata, n_folds=3,
+                   n_lambda=10, device="cpu")
+    assert np.isfinite(res.cv_mean).all() and "x0" in res.selected("min")
+    with pytest.raises(ValueError, match="strata"):
+        lasso_cv(X, event, family="binomial", strata=strata, device="cpu")
