@@ -342,16 +342,36 @@ def check_lasso_cox_strata(device, n=1000, p=20):
     lambdas where statsmodels' coordinate descent itself satisfies KKT (it can leave a violating
     coefficient at zero; such lambdas are counted in ref_not_optimal).
     """
+    X, time_, event, strata = _stratified_lasso_cox_data(n, p)
+    return _lasso_cox_vs_phreg(device, "lasso_cox_strata_vs_statsmodels", X, time_, event, strata)
+
+
+def _stratified_lasso_cox_data(n, p):
     X = _standardized(n, p, 18)
     rng = np.random.default_rng(19)
     strata = rng.integers(0, 4, size=n)
     eta = X[:, :3] @ np.array([0.8, -0.6, 0.5]) + 0.5 * strata
     t_event = np.ceil(rng.exponential(1 / np.exp(eta)) * 20)
     t_cens = np.ceil(rng.exponential(2.0, size=n) * 20)
-    time_, event = np.minimum(t_event, t_cens), (t_event <= t_cens).astype(float)
-    res = lasso_cv(X, family="cox", time=time_, event=event, strata=strata, n_folds=0,
-                   n_lambda=10, device=device, tol=1e-10, max_iter=50000)
-    model = sm.PHReg(time_, X, status=event, ties="breslow", strata=strata)
+    return X, np.minimum(t_event, t_cens), (t_event <= t_cens).astype(float), strata
+
+
+def check_lasso_cox_entry(device, n=1000, p=20):
+    """Left-truncated stratified Breslow Cox lasso vs PHReg(entry=, strata=).fit_regularized,
+    gated as check_lasso_cox_strata. Entry times are non-integer so none equals an event time
+    (statsmodels counts a row as at risk at its entry time; gpureg, like R, does not)."""
+    X, time_, event, strata = _stratified_lasso_cox_data(n, p)
+    rng = np.random.default_rng(20)
+    entry = np.where(rng.random(n) < 0.6, rng.uniform(0.05, 0.9, n) * time_, 0.0)
+    return _lasso_cox_vs_phreg(device, "lasso_cox_entry_vs_statsmodels", X, time_, event, strata,
+                               entry)
+
+
+def _lasso_cox_vs_phreg(device, name, X, time_, event, strata, entry=None):
+    n, p = X.shape
+    res = lasso_cv(X, family="cox", time=time_, event=event, strata=strata, entry=entry,
+                   n_folds=0, n_lambda=10, device=device, tol=1e-10, max_iter=50000)
+    model = sm.PHReg(time_, X, status=event, ties="breslow", strata=strata, entry=entry)
     err = kkt = 0.0
     not_opt = 0
     for lam, coef in zip(res.lambdas, res.coef):
@@ -361,7 +381,7 @@ def check_lasso_cox_strata(device, n=1000, p=20):
             not_opt += 1
             continue
         err = max(err, float(np.abs(coef - ref).max()))
-    return {"check": "lasso_cox_strata_vs_statsmodels", "n": n, "m": p, "coef_max_abs_err": err,
+    return {"check": name, "n": n, "m": p, "coef_max_abs_err": err,
             "kkt_max_abs": kkt, "ref_not_optimal": not_opt,
             "pass": err <= TOL["lasso_cox_abs"] and kkt <= TOL["lasso_kkt_abs"]
             and not_opt < len(res.lambdas)}
@@ -497,7 +517,8 @@ def run_all(quick, device):
     for kind in ("gaussian", "binomial", "poisson", "cox"):
         checks.append(check_degenerate(kind, device))
     for fn in (check_lasso_gaussian, check_lasso_gaussian_float32, check_lasso_binomial,
-               check_lasso_cox, check_lasso_cox_strata, check_lasso_cox_recovery,
+               check_lasso_cox, check_lasso_cox_strata, check_lasso_cox_entry,
+               check_lasso_cox_recovery,
                check_lasso_strong_rules):
         checks.append(fn(device))
     return checks

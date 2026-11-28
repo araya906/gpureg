@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-27T01:51:29+00:00",
+  "timestamp": "2026-11-28T01:45:18+00:00",
   "device": "cpu",
   "torch": "2.15.0+cu132",
   "python": "3.13.18",
@@ -15,8 +15,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.0066586120000238225,
-      "time_reference_s": 0.012965755999971407
+      "time_gpureg_s": 0.005929633999983253,
+      "time_reference_s": 0.012393331999987822
     },
     {
       "check": "screen_binomial",
@@ -28,8 +28,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.004593758000055459,
-      "time_reference_s": 0.021240233999947122
+      "time_gpureg_s": 0.004245141000012609,
+      "time_reference_s": 0.018721184000014546
     },
     {
       "check": "screen_poisson",
@@ -41,8 +41,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.0038768570000229374,
-      "time_reference_s": 0.017275655000048573
+      "time_gpureg_s": 0.0035995560000401383,
+      "time_reference_s": 0.015021956999987651
     },
     {
       "check": "screen_cox_efron",
@@ -54,8 +54,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.010731845999998768,
-      "time_reference_s": 0.21298733200001152
+      "time_gpureg_s": 0.009560437999994065,
+      "time_reference_s": 0.19634666600001083
     },
     {
       "check": "screen_cox_breslow",
@@ -67,8 +67,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.00995742899999641,
-      "time_reference_s": 0.11177241899997625
+      "time_gpureg_s": 0.009335448000001634,
+      "time_reference_s": 0.10143196199999238
     },
     {
       "check": "screen_gaussian",
@@ -80,8 +80,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.047390746000019135,
-      "time_reference_s": 0.4469258290000653
+      "time_gpureg_s": 0.0496990849999861,
+      "time_reference_s": 0.43717607199999975
     },
     {
       "check": "screen_binomial",
@@ -93,8 +93,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.07448916600003486,
-      "time_reference_s": 0.6101934989999336
+      "time_gpureg_s": 0.07248265299995182,
+      "time_reference_s": 0.5083782500000211
     },
     {
       "check": "screen_poisson",
@@ -106,8 +106,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.08076532100005807,
-      "time_reference_s": 0.5244448550000698
+      "time_gpureg_s": 0.09533675799997354,
+      "time_reference_s": 0.5287140419999901
     },
     {
       "check": "screen_cox_efron",
@@ -119,8 +119,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.6050690030000396,
-      "time_reference_s": 6.09207377700011
+      "time_gpureg_s": 0.4867564709999783,
+      "time_reference_s": 6.303865712999993
     },
     {
       "check": "screen_cox_breslow",
@@ -132,8 +132,8 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.6204787149999902,
-      "time_reference_s": 3.8203666420000673
+      "time_gpureg_s": 0.4631075140000007,
+      "time_reference_s": 3.6785567199999605
     },
     {
       "check": "screen_poisson_offset",
@@ -145,7 +145,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.07978395600002841
+      "time_gpureg_s": 0.07170283099998187
     },
     {
       "check": "screen_gaussian_robust",
@@ -157,7 +157,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.04718720299990764
+      "time_gpureg_s": 0.05347281600000997
     },
     {
       "check": "screen_binomial_robust",
@@ -169,7 +169,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.07067161400004807
+      "time_gpureg_s": 0.074817161999988
     },
     {
       "check": "screen_poisson_robust",
@@ -181,7 +181,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.06496841599994241
+      "time_gpureg_s": 0.05860841700001629
     },
     {
       "check": "screen_cox_efron_strata",
@@ -193,7 +193,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.9567650859999048
+      "time_gpureg_s": 0.7488999739999826
     },
     {
       "check": "screen_cox_efron_entry",
@@ -205,7 +205,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.5132811669999455
+      "time_gpureg_s": 0.5057835090000253
     },
     {
       "check": "screen_cox_efron_robust",
@@ -217,7 +217,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.06918734600003518
+      "time_gpureg_s": 0.05282926000000998
     },
     {
       "check": "screen_cox_breslow_strata",
@@ -229,7 +229,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.9641076319999229
+      "time_gpureg_s": 0.7774349449999818
     },
     {
       "check": "screen_cox_breslow_entry",
@@ -241,7 +241,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.5811405120000472
+      "time_gpureg_s": 0.4258038180000199
     },
     {
       "check": "screen_cox_breslow_robust",
@@ -253,7 +253,7 @@
       "all_converged": true,
       "n_infinite": 0,
       "pass": true,
-      "time_gpureg_s": 0.9004818319999686
+      "time_gpureg_s": 0.8226819210000258
     },
     {
       "check": "screen_binomial_float32_vs_float64",
@@ -322,7 +322,7 @@
       "check": "lasso_binomial_vs_sklearn",
       "n": 1000,
       "m": 20,
-      "coef_max_abs_err": 3.0811819762277537e-10,
+      "coef_max_abs_err": 2.933044918052019e-10,
       "pass": true
     },
     {
@@ -339,6 +339,15 @@
       "coef_max_abs_err": 6.656292184104018e-11,
       "kkt_max_abs": 3.6080999299414884e-11,
       "ref_not_optimal": 1,
+      "pass": true
+    },
+    {
+      "check": "lasso_cox_entry_vs_statsmodels",
+      "n": 1000,
+      "m": 20,
+      "coef_max_abs_err": 6.557565601639226e-11,
+      "kkt_max_abs": 2.9139092506090536e-11,
+      "ref_not_optimal": 2,
       "pass": true
     },
     {

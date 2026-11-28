@@ -49,7 +49,7 @@ Inputs can be numpy arrays or pandas objects; DataFrame column names are kept.
 |---|---|---|
 | GLM (gaussian, binomial, poisson; canonical links) | Batched Newton with step halving | `glm()` / statsmodels `GLM` |
 | Cox (Efron default, Breslow; optional strata and start-stop times) | Batched Newton with step halving | `coxph()` / statsmodels `PHReg` |
-| Lasso / elastic net (gaussian, binomial, Cox-Breslow; optional Cox strata) | Batched FISTA with backtracking and restart | `glmnet` scaling, scikit-learn `Lasso` |
+| Lasso / elastic net (gaussian, binomial, Cox-Breslow; optional Cox strata and entry times) | Batched FISTA with backtracking and restart | `glmnet` scaling, scikit-learn `Lasso` |
 
 - **Screening** builds a `(models, n, k)` design per chunk; chunk size is set from free GPU memory (`chunk_size=` overrides). On CPU the default is a 256 MB budget and at most 64 models per chunk. A CPU benchmark (`python validation/bench_chunks.py`, results in `validation/results/bench_chunks.md`; 2 threads, float64, n = 5,000-100,000) puts these auto chunks (3-64 models) within about 0-30% of the fastest fixed size for GLMs and untied Cox (the former 2 GB budget was 1.3-2.2x slower). The memory estimate counts the design and group sums (8 `(n, k)` copies) plus, for Cox, the padded Efron tie tensors (event times x largest tie count x k, about 3 alive at once, 5 with `robust=True`); measured peaks are 0.8-1.4x the estimate for GLMs, untied and heavily tied Cox. Heavily tied Cox (221-2261 tied deaths) now gets 64/12/4 models at n = 5,000/20,000/50,000 (was 3/1/1 from a `2 x max ties` term 4-70x too high): fastest of the sizes tried at n = 20,000 and 50,000 (1.2-2.0x faster than chunk 1 there), 1.2x slower than 16 at n = 5,000. GPU timing was not measured.
 - **Missing feature values** (NaN) are handled per model with zero weights, so each model uses its own complete rows. Outcome and covariates must be complete.
@@ -62,9 +62,9 @@ Inputs can be numpy arrays or pandas objects; DataFrame column names are kept.
 ## Caveats
 
 - Lasso selects variables but its coefficients have no valid p-values, and refitting the selected set with `glm_fit`/`cox_fit` gives over-optimistic p-values. Use post-selection inference or sample splitting if you need tests.
-- Cox: no case weights; `lasso_cv` has no entry times (`strata=` is supported, as `glmnet` with `stratifySurv`). With `entry=`, a row is at risk on `(entry, time]` as in R's `survival`; statsmodels `PHReg(entry=)` also counts it at its entry time, so results differ when an entry time equals an event time.
+- Cox: no case weights; `lasso_cv` supports `strata=` (as `glmnet` with `stratifySurv`) and `entry=` (start-stop data, as `glmnet` with `Surv(start, stop, event)`). With `entry=`, a row is at risk on `(entry, time]` as in R's `survival`; statsmodels `PHReg(entry=)` also counts it at its entry time, so results differ when an entry time equals an event time.
 - GPU speed-up comes from batching many models or large `n`; a single small model is faster on CPU.
 
 ## Tests
 
-`tests/` compare results against statsmodels (GLM, PHReg) and scikit-learn (`Lasso`), the Cox lasso against scikit-survival (`CoxnetSurvivalAnalysis`, optional: `pip install -e ".[survival]"`, skipped if absent) and the stratified Cox lasso against statsmodels `PHReg(strata=).fit_regularized`, and check that CV lasso recovers simulated signals. Run with `pytest` (CPU is enough).
+`tests/` compare results against statsmodels (GLM, PHReg) and scikit-learn (`Lasso`), the Cox lasso against scikit-survival (`CoxnetSurvivalAnalysis`, optional: `pip install -e ".[survival]"`, skipped if absent) and the stratified and left-truncated Cox lasso against statsmodels `PHReg(strata=, entry=).fit_regularized`, and check that CV lasso recovers simulated signals. Run with `pytest` (CPU is enough).

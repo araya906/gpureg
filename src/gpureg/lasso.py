@@ -16,6 +16,7 @@ import torch.nn.functional as F
 from ._device import check_dtype, resolve_device
 from ._inputs import as_matrix, as_vector, require_complete, strata_codes
 from ._newton import _rounding_floor
+from .cox import _entry_times
 from ._risksets import build_risk_sets, group_sum, later_group_sum, risk_set_sum
 
 LASSO_FAMILIES = ("gaussian", "binomial", "cox")
@@ -85,25 +86,28 @@ class LassoResult:
                              "cv_mean": self.cv_mean, "cv_se": self.cv_se})
 
 
-def _lasso_inputs(X, y, family, time, event, strata):
+def _lasso_inputs(X, y, family, time, event, strata, entry):
     """Arrays for the problem; cox rows are sorted by stratum, then descending time."""
     if family not in LASSO_FAMILIES:
         raise ValueError(f"family must be one of {LASSO_FAMILIES}, got {family!r}.")
     if strata is not None and family != "cox":
         raise ValueError("strata is only supported for family='cox'.")
+    if entry is not None and family != "cox":
+        raise ValueError("entry is only supported for family='cox'.")
     Xa, names = as_matrix(X, "x")
-    tv = codes = None
+    tv = codes = en = None
     if family == "cox":
         tv, yv = as_vector(time, "time"), as_vector(event, "event")
-        codes = strata_codes(strata, len(tv))
+        codes, en = strata_codes(strata, len(tv)), _entry_times(entry, tv)
         order = np.lexsort((-tv, codes))
         tv, yv, Xa, codes = tv[order], yv[order], Xa[order], codes[order]
+        en = None if en is None else en[order]
     else:
         yv = as_vector(y, "y")
     if family != "gaussian" and not np.isin(yv, (0.0, 1.0)).all():
         raise ValueError("binomial outcome / cox event must be coded 0/1.")
     require_complete(Xa, "X", len(yv))
-    return Xa, names, yv, tv, codes
+    return Xa, names, yv, tv, codes, en
 
 
 def _lasso_penalty(names, unpenalized, intercept):
@@ -134,12 +138,13 @@ def _lasso_folds(n, n_folds, seed, device, dtype):
     return torch.as_tensor(np.stack(rows), device=device, dtype=dtype)
 
 
-def _lasso_problem(X, y, family, time, event, strata, unpenalized, n_folds, seed, device, dtype):
-    Xa, names, yv, tv, codes = _lasso_inputs(X, y, family, time, event, strata)
+def _lasso_problem(X, y, family, time, event, strata, entry, unpenalized, n_folds, seed, device,
+                   dtype):
+    Xa, names, yv, tv, codes, en = _lasso_inputs(X, y, family, time, event, strata, entry)
     intercept = family != "cox"
     Xs, mean, scale = _lasso_standardize(torch.as_tensor(Xa, device=device, dtype=dtype), intercept)
     pf = torch.as_tensor(_lasso_penalty(names, unpenalized, intercept), device=device, dtype=dtype)
-    rs = build_risk_sets(tv, yv, device, codes) if family == "cox" else None
+    rs = build_risk_sets(tv, yv, device, codes, en) if family == "cox" else None
     W = _lasso_folds(len(yv), n_folds, seed, device, dtype)
     yt = torch.as_tensor(yv, device=device, dtype=dtype)
     return _LassoProblem(family, Xs, yt, W, pf, mean, scale, intercept, rs, names)
@@ -332,14 +337,16 @@ def _lasso_result(prob, lambdas, coefs, devs, n_cols):
     return LassoResult(prob.names, lambdas, beta, None, cv_mean, cv_se, pf > 0, prob.family, n_cols)
 
 
-def lasso_cv(X, y=None, *, family="gaussian", time=None, event=None, strata=None, unpenalized=None,
-             alpha=1.0, n_lambda=100, lambda_min_ratio=None, n_folds=10, seed=0,
+def lasso_cv(X, y=None, *, family="gaussian", time=None, event=None, strata=None, entry=None,
+             unpenalized=None, alpha=1.0, n_lambda=100, lambda_min_ratio=None, n_folds=10, seed=0,
              device=None, dtype=torch.float64, max_iter=5000, tol=1e-7, strong_rules=True):
     """Lasso (alpha=1) or elastic-net path with K-fold CV; all folds fitted as one batch.
 
     family: 'gaussian' or 'binomial' (pass y), or 'cox' (pass time and event; Breslow ties).
     strata: cox only; length-n labels giving each stratum its own baseline hazard (risk sets
     never cross strata; CV deviance uses the same stratified risk sets).
+    entry: cox only; length-n entry times (< time) for start-stop / left-truncated data: a row is
+    at risk on (entry, time]; combines with strata.
     unpenalized: column names or indices kept in every model (e.g. confounders).
     n_folds=0 fits the path on the full data only.
     tol (max coefficient change) is raised to the dtype's rounding floor (float32: ~1e-6).
@@ -349,7 +356,8 @@ def lasso_cv(X, y=None, *, family="gaussian", time=None, event=None, strata=None
     dev = resolve_device(device)
     check_dtype(dev, dtype)
     tol = _rounding_floor(dtype, tol)
-    prob = _lasso_problem(X, y, family, time, event, strata, unpenalized, n_folds, seed, dev, dtype)
+    prob = _lasso_problem(X, y, family, time, event, strata, entry, unpenalized, n_folds, seed,
+                          dev, dtype)
     obj = _lasso_objective(prob, prob.W)
     L = torch.full((prob.W.shape[0],), _lasso_lipschitz(prob), device=dev, dtype=dtype)
     lambdas, beta, L = _lasso_lambdas(prob, obj, alpha, n_lambda, lambda_min_ratio, L, max_iter, tol)
